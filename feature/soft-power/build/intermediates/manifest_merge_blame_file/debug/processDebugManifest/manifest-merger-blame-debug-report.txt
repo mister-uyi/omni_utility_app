@@ -1,0 +1,40 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.omniutility.feature.softpower" >
+4
+5    <uses-sdk android:minSdkVersion="33" />
+6
+7    <!-- Required to paint the floating button over external user windows -->
+8    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+8-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:6:5-77
+8-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:6:22-75
+9
+10    <application>
+10-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:8:5-21:19
+11
+12        <!-- Core Service Framework Binding Accessibility Actions -->
+13        <service
+13-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:10:9-20:19
+14            android:name="com.omniutility.feature.softpower.service.SoftPowerAccessibilityService"
+14-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:11:13-66
+15            android:exported="true"
+15-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:13:13-36
+16            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" >
+16-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:12:13-79
+17            <intent-filter>
+17-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:14:13-16:29
+18                <action android:name="android.accessibilityservice.AccessibilityService" />
+18-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:15:17-92
+18-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:15:25-89
+19            </intent-filter>
+20
+21            <meta-data
+21-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:17:13-19:72
+22                android:name="android.accessibilityservice"
+22-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:18:17-60
+23                android:resource="@xml/accessibility_service_config" />
+23-->/Users/uyioriaghan/Documents/data/my_stuff/my_utility_app/feature/soft-power/src/main/AndroidManifest.xml:19:17-69
+24        </service>
+25    </application>
+26
+27</manifest>

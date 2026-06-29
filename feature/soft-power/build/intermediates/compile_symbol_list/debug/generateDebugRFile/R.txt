@@ -1,0 +1,3 @@
+int string accessibility_service_description 0x0
+int string soft_power_label 0x0
+int xml accessibility_service_config 0x0

@@ -1,0 +1,4 @@
+com.omniutility.feature.softpower
+string accessibility_service_description
+string soft_power_label
+xml accessibility_service_config

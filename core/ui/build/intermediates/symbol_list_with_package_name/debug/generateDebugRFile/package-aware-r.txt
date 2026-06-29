@@ -1,0 +1,5 @@
+com.omniutility.core.ui
+font lato_bold
+font lato_regular
+font montserrat_bold
+font montserrat_regular

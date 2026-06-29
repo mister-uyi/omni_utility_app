@@ -1,0 +1,6 @@
+R_DEF: Internal format may change without notice
+local
+font lato_bold
+font lato_regular
+font montserrat_bold
+font montserrat_regular

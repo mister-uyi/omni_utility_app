@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">Used solely to trigger the system-level lock screen action when the floating button is tapped. Does not monitor or record any screen content.</string>
+    <string name="soft_power_label">Soft Power Button</string>
+</resources>
