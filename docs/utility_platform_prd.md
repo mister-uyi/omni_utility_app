@@ -66,6 +66,7 @@ The Dashboard UI simply renders a list of these static metadata objects, navigat
 * **FR-1.2 Draggable Bounds:** Enable drag gestures with smooth snapping to the nearest lateral screen margin (left/right) on release (`ACTION_UP`).
 * **FR-1.3 Biometric-Safe Locking:** Call `performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)` from the feature's `AccessibilityService` context.
 * **FR-1.4 Feature Onboarding:** A Compose screen that checks settings permissions ("Display over other apps" and "Accessibility Access") and deep-links the user to the system settings pages if permission is missing.
+* **FR-1.5 Secure Screen Overlay Persistence:** The Accessibility Service configuration must strictly declare `android:isAccessibilityTool="true"` to bypass aggressive OS behavior that would otherwise forcibly hide the floating button when the user navigates into secure Android system settings.
 
 ---
 
