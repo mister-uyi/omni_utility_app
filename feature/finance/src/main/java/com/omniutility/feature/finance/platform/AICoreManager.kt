@@ -89,12 +89,9 @@ class AICoreManager @Inject constructor(
                     model.prepareInferenceEngine()
                     _status.value = AICoreStatus.Ready
                 } catch (e: Exception) {
+                    android.util.Log.e("AICoreManager", "AICore engine preparation failed", e)
                     val msg = e.message ?: "AICore binding failed"
-                    if (msg.contains("NOT_AVAILABLE", ignoreCase = true) || msg.contains("BINDING_FAILURE", ignoreCase = true)) {
-                        _status.value = AICoreStatus.Unsupported
-                    } else {
-                        _status.value = AICoreStatus.Error(msg)
-                    }
+                    _status.value = AICoreStatus.Error(msg)
                 }
             }
 
