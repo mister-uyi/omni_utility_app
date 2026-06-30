@@ -311,3 +311,9 @@ private fun isAccessibilityServiceEnabled(context: Context): Boolean {
     return enabled.contains(componentName.flattenToString(), ignoreCase = true) ||
             enabled.contains(componentName.flattenToShortString(), ignoreCase = true)
 }
+
+@dagger.hilt.EntryPoint
+@dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
+interface SoftPowerEntryPoint {
+    fun softPowerSettingsRepository(): SoftPowerSettingsRepository
+}

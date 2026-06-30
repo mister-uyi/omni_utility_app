@@ -25,9 +25,13 @@ fun MainNavigation() {
           MainScreen(onItemClick = { navKey -> backStack.add(navKey) }, modifier = Modifier.safeDrawingPadding().padding(16.dp))
         }
         entry<SoftPower> {
-          val app = LocalContext.current.applicationContext as OmniApplication
+          val context = LocalContext.current
+          val repository = dagger.hilt.android.EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            com.omniutility.feature.softpower.SoftPowerEntryPoint::class.java
+          ).softPowerSettingsRepository()
           SoftPowerSettingsScreen(
-            repository = app.container.softPowerSettingsRepository,
+            repository = repository,
             onBackClick = { backStack.removeLastOrNull() }
           )
         }

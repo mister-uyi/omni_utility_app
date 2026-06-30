@@ -7,6 +7,10 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
+
 data class SoftPowerPreferences(
     val buttonOpacity: Float = 0.6f,
     val buttonSize: Int = 56,
@@ -15,7 +19,10 @@ data class SoftPowerPreferences(
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "soft_power_settings")
 
-class SoftPowerSettingsRepository(private val context: Context) {
+@Singleton
+class SoftPowerSettingsRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
     private object Keys {
         val OPACITY = floatPreferencesKey("button_opacity")
         val SIZE = intPreferencesKey("button_size")
