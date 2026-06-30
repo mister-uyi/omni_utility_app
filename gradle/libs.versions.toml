@@ -16,6 +16,7 @@ lifecycleViewmodelNav3 = "2.10.0"
 androidxDatastore = "1.1.1"
 hilt = "2.59.2"
 ksp = "2.2.10-2.0.2"
+aicore = "0.0.1-exp02"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -43,6 +44,7 @@ androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", vers
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNav3" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+google-aicore = { group = "com.google.ai.edge.aicore", name = "aicore", version.ref = "aicore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

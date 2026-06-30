@@ -33,3 +33,4 @@ rootProject.name = "OmniUtility"
 include(":app")
 include(":core:ui")
 include(":feature:soft-power")
+include(":feature:finance")

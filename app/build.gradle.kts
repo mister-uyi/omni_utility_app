@@ -48,6 +48,7 @@ kotlin {
 dependencies {
   implementation(project(":core:ui"))
   implementation(project(":feature:soft-power"))
+  implementation(project(":feature:finance"))
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
   androidTestImplementation(composeBom)
