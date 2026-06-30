@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -16,9 +17,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -26,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
 import com.omniutility.SoftPower
+import com.omniutility.Finance
 import com.omniutility.core.ui.UtilityMetadata
 import com.omniutility.core.ui.theme.OmniUtilityTheme
 
@@ -69,11 +73,19 @@ fun MainScreen(
             }
 
             items(items) { metadata ->
+                val context = LocalContext.current
                 UtilityCard(
                     metadata = metadata,
                     onClick = {
-                        if (metadata.id == "soft_power") {
-                            onItemClick(SoftPower)
+                        if (metadata.isLocked) {
+                            val msg = metadata.lockMessage ?: "This feature is locked on your device."
+                            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            if (metadata.id == "soft_power") {
+                                onItemClick(SoftPower)
+                            } else if (metadata.id == "finance") {
+                                onItemClick(Finance)
+                            }
                         }
                     }
                 )
@@ -87,6 +99,7 @@ fun UtilityCard(
     metadata: UtilityMetadata,
     onClick: () -> Unit
 ) {
+    val alpha = if (metadata.isLocked) 0.5f else 1f
     Card(
         shape = RoundedCornerShape(32.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -94,6 +107,7 @@ fun UtilityCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
+            .alpha(alpha)
     ) {
         Row(
             modifier = Modifier
@@ -137,7 +151,7 @@ fun UtilityCard(
             }
 
             Icon(
-                imageVector = Icons.Default.PlayArrow,
+                imageVector = if (metadata.isLocked) Icons.Default.Lock else Icons.Default.PlayArrow,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )

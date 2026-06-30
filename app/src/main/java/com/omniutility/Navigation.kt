@@ -11,6 +11,8 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.omniutility.feature.softpower.SoftPowerSettingsScreen
 import com.omniutility.ui.main.MainScreen
+import com.omniutility.feature.finance.ui.FinanceDashboardScreen
+import com.omniutility.feature.finance.ui.FinanceDashboardViewModel
 
 @Composable
 fun MainNavigation() {
@@ -32,6 +34,13 @@ fun MainNavigation() {
           ).softPowerSettingsRepository()
           SoftPowerSettingsScreen(
             repository = repository,
+            onBackClick = { backStack.removeLastOrNull() }
+          )
+        }
+        entry<Finance> {
+          val viewModel: FinanceDashboardViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+          FinanceDashboardScreen(
+            viewModel = viewModel,
             onBackClick = { backStack.removeLastOrNull() }
           )
         }
