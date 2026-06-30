@@ -60,4 +60,7 @@ dependencies {
     // SQLCipher & SQLite
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.sqlite.ktx)
+
+    // PDFBox
+    implementation(libs.pdfbox.android)
 }

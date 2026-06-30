@@ -118,6 +118,51 @@ class OfflineAIEngine @Inject constructor(
         }
     }
 
+    suspend fun parseTransactionChunk(textChunk: String): List<ParsedTransaction> = withContext(Dispatchers.Default) {
+        val model = aiCoreManager.getModel() ?: return@withContext emptyList()
+
+        val prompt = """
+            You are an offline finance statement parser. Convert the raw bank statement lines into a valid JSON array of transaction objects.
+            Each object must contain keys: "amount" (double), "vendor" (string), "type" ("CR" for deposit, "DR" for debit), "category" (one of the Categories below).
+            Do not output any explanation or markdown formatting, just the raw JSON.
+
+            Categories: Food & Dining, Shopping, Groceries, Utilities & Bills, Transport & Travel, Entertainment, Income & Salary, Others.
+
+            Statement Lines:
+            $textChunk
+        """.trimIndent()
+
+        try {
+            val response = model.generateContent(content { text(prompt) })
+            val text = response.text ?: return@withContext emptyList()
+            parseJsonTransactions(text)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    private fun parseJsonTransactions(jsonText: String): List<ParsedTransaction> {
+        val list = mutableListOf<ParsedTransaction>()
+        try {
+            val cleaned = jsonText.replace("```json", "").replace("```", "").trim()
+            val array = org.json.JSONArray(cleaned)
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                val amount = obj.optDouble("amount", 0.0)
+                val vendor = obj.optString("vendor", "Unknown")
+                val type = if (obj.optString("type", "DR").uppercase() == "CR") "CR" else "DR"
+                val category = obj.optString("category", "Others")
+                if (amount > 0.0) {
+                    list.add(ParsedTransaction(amount, vendor, type, category))
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
+
     private fun parseTransactionResponse(text: String): ParsedTransaction? {
         val lines = text.split("\n")
         var amount = 0.0

@@ -1,6 +1,7 @@
 package com.omniutility.feature.finance.data.repository
 
 import com.omniutility.feature.finance.data.ai.OfflineAIEngine
+import com.omniutility.feature.finance.data.ai.ParsedTransaction
 import com.omniutility.feature.finance.data.db.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -141,6 +142,56 @@ class FinanceRepository @Inject constructor(
             accountContainerDao.updateBalance(transaction.containerId, newBalance)
         }
         transactionRecordDao.delete(transaction)
+    }
+
+    fun getMemoryLookupsFlow(): Flow<List<MemoryLookupEntity>> = memoryLookupDao.getAllFlow()
+
+    suspend fun deleteMemoryLookup(lookup: MemoryLookupEntity) {
+        memoryLookupDao.delete(lookup)
+    }
+
+    suspend fun addRawTransactionChunk(accountId: String, chunkText: String): List<ParsedTransaction> {
+        val accounts = accountContainerDao.getAll()
+        val account = accounts.find { it.containerId == accountId } ?: return emptyList()
+
+        val parsedTrxs = aiEngine.parseTransactionChunk(chunkText)
+        if (parsedTrxs.isEmpty()) return emptyList()
+
+        var accumulatedBalance = account.currentBalance
+        val entities = parsedTrxs.map { trx ->
+            // Check memory cache lookup
+            var category = trx.category
+            val cachedLookup = memoryLookupDao.findByRawString(trx.vendor.lowercase().trim())
+            if (cachedLookup != null) {
+                category = cachedLookup.explicitUserCategory
+                memoryLookupDao.incrementHitCount(cachedLookup.lookupId)
+            }
+
+            accumulatedBalance = if (trx.type == "CR") {
+                accumulatedBalance + trx.amount
+            } else {
+                accumulatedBalance - trx.amount
+            }
+
+            TransactionRecordEntity(
+                trxId = UUID.randomUUID().toString(),
+                containerId = accountId,
+                timestamp = System.currentTimeMillis(),
+                rawNarration = "Statement Import Line",
+                cleanedVendor = trx.vendor,
+                amount = trx.amount,
+                type = trx.type,
+                category = category
+            )
+        }
+
+        // Save transactions
+        transactionRecordDao.insertAll(entities)
+
+        // Save updated account balance
+        accountContainerDao.updateBalance(accountId, accumulatedBalance)
+
+        return parsedTrxs
     }
 
     // --- Financial Compass Goals Operations ---

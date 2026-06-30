@@ -41,7 +41,7 @@ fun MainNavigation() {
           val viewModel: FinanceDashboardViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
           FinanceDashboardScreen(
             viewModel = viewModel,
-            onBackClick = { backStack.removeLastOrNull() }
+            onBack = { backStack.removeLastOrNull() }
           )
         }
       },

@@ -8,10 +8,17 @@ import com.omniutility.feature.finance.data.db.TransactionRecordEntity
 import com.omniutility.feature.finance.data.repository.FinanceRepository
 import com.omniutility.feature.finance.platform.AICoreManager
 import com.omniutility.feature.finance.platform.AICoreStatus
+import com.omniutility.feature.finance.data.db.MemoryLookupEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class ChatMessage(
+    val text: String,
+    val isUser: Boolean,
+    val timestamp: Long = System.currentTimeMillis()
+)
 
 data class FinanceUiState(
     val aiCoreStatus: AICoreStatus = AICoreStatus.Checking,
@@ -162,5 +169,58 @@ class FinanceDashboardViewModel @Inject constructor(
 
     fun retryDiagnostics() {
         aiCoreManager.checkSupportAndPrepare()
+    }
+
+    private val _chatMessages = MutableStateFlow<List<ChatMessage>>(
+        listOf(ChatMessage("Hi! I'm your offline Private AI. Ask me anything about your expenses.", false))
+    )
+    val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages
+
+    val memoryRegistry: StateFlow<List<MemoryLookupEntity>> = repository.getMemoryLookupsFlow()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun deleteMemoryLookup(lookup: MemoryLookupEntity) {
+        viewModelScope.launch {
+            repository.deleteMemoryLookup(lookup)
+        }
+    }
+
+    fun sendChatMessage(messageText: String, categoryContext: String?) {
+        val userMsg = ChatMessage(messageText, true)
+        _chatMessages.value = _chatMessages.value + userMsg
+
+        viewModelScope.launch {
+            val transactions = uiState.value.transactions
+            val summaryText = transactions.take(15).joinToString("\n") {
+                "- ${it.cleanedVendor}: ${it.type} ${it.amount} [${it.category}]"
+            }
+            
+            val prompt = """
+                You are a private offline finance advisor. Answer the user's question concisely based on their transactions and the category context if provided.
+                Category Context: ${categoryContext ?: "None"}
+                User Question: "$messageText"
+
+                Transactions:
+                $summaryText
+            """.trimIndent()
+
+            val response = try {
+                val model = aiCoreManager.getModel()
+                if (model != null) {
+                    val res = model.generateContent(com.google.ai.edge.aicore.content { text(prompt) })
+                    res.text ?: "No response generated."
+                } else {
+                    "On-device AI engine is not ready yet."
+                }
+            } catch (e: Exception) {
+                "Error: ${e.message}"
+            }
+
+            _chatMessages.value = _chatMessages.value + ChatMessage(response, false)
+        }
     }
 }

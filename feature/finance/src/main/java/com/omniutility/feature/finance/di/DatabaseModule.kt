@@ -29,6 +29,7 @@ object DatabaseModule {
         @ApplicationContext context: Context,
         supportOpenHelperFactory: SupportOpenHelperFactory
     ): FinanceDatabase {
+        com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(context.applicationContext)
         return Room.databaseBuilder(
             context,
             FinanceDatabase::class.java,
