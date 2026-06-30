@@ -51,4 +51,13 @@ dependencies {
 
     // AICore
     implementation(libs.google.aicore)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    // SQLCipher & SQLite
+    implementation(libs.sqlcipher.android)
+    implementation(libs.androidx.sqlite.ktx)
 }
