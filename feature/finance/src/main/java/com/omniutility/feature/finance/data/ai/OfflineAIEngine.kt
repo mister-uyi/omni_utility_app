@@ -157,6 +157,20 @@ class OfflineAIEngine @Inject constructor(
         }
     }
 
+    suspend fun generateChatReply(prompt: String, categoryContext: String?): String = withContext(Dispatchers.Default) {
+        val model = aiCoreManager.getModel()
+        if (model == null) {
+            return@withContext generateChatReplyMock(prompt, categoryContext)
+        }
+
+        try {
+            val response = model.generateContent(content { text(prompt) })
+            response.text ?: "No response generated."
+        } catch (e: Exception) {
+            "Error: ${e.message}"
+        }
+    }
+
     private fun parseJsonTransactions(jsonText: String): List<ParsedTransaction> {
         val list = mutableListOf<ParsedTransaction>()
         try {
@@ -302,6 +316,24 @@ class OfflineAIEngine @Inject constructor(
     private fun parseTransactionChunkMock(textChunk: String): List<ParsedTransaction> {
         return textChunk.split("\n").filter { it.trim().isNotEmpty() }.map { line ->
             parseTransactionMock(line)
+        }
+    }
+
+    private fun generateChatReplyMock(prompt: String, categoryContext: String?): String {
+        val lower = prompt.lowercase()
+        return when {
+            lower.contains("hello") || lower.contains("hi") -> {
+                "Hello! I am your safe offline financial assistant. Running in local fallback mode. How can I help you analyze your transactions today?"
+            }
+            lower.contains("spend") || lower.contains("spent") || lower.contains("most") || lower.contains("highest") -> {
+                "Based on local heuristics, your highest spending category recently has been ${categoryContext ?: "Food & Dining"}. Try setting a Vault cap to curb outflows."
+            }
+            lower.contains("save") || lower.contains("saving") || lower.contains("budget") -> {
+                "To optimize your savings, review your recurring subscriptions under Entertainment and Bills. Keeping a ledger delta above 15% is recommended."
+            }
+            else -> {
+                "Offline Mock Chat: I analyzed your request about '${if (categoryContext != null) "$categoryContext - " else ""}$prompt'. Try checking your Analytics tab for visual insights."
+            }
         }
     }
 }

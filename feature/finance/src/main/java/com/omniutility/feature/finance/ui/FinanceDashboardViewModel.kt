@@ -35,7 +35,8 @@ data class FinanceUiState(
 @HiltViewModel
 class FinanceDashboardViewModel @Inject constructor(
     private val repository: FinanceRepository,
-    private val aiCoreManager: AICoreManager
+    private val aiCoreManager: AICoreManager,
+    private val aiEngine: com.omniutility.feature.finance.data.ai.OfflineAIEngine
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -209,13 +210,7 @@ class FinanceDashboardViewModel @Inject constructor(
             """.trimIndent()
 
             val response = try {
-                val model = aiCoreManager.getModel()
-                if (model != null) {
-                    val res = model.generateContent(com.google.ai.edge.aicore.content { text(prompt) })
-                    res.text ?: "No response generated."
-                } else {
-                    "On-device AI engine is not ready yet."
-                }
+                aiEngine.generateChatReply(prompt, categoryContext)
             } catch (e: Exception) {
                 "Error: ${e.message}"
             }
