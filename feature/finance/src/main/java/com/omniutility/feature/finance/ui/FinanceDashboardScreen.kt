@@ -819,6 +819,7 @@ fun DiagnosticsCard(
     val containerColor = when (status) {
         is AICoreStatus.Ready -> Color(0xFF2E7D32).copy(alpha = 0.1f)
         is AICoreStatus.Checking, is AICoreStatus.Downloading -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        is AICoreStatus.Fallback -> Color(0xFFE65100).copy(alpha = 0.1f)
         is AICoreStatus.Unsupported -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
         is AICoreStatus.Error -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
     }
@@ -846,13 +847,18 @@ fun DiagnosticsCard(
                     is AICoreStatus.Ready -> Icons.Default.CheckCircle
                     is AICoreStatus.Checking -> Icons.Default.Info
                     is AICoreStatus.Downloading -> Icons.Default.Refresh
+                    is AICoreStatus.Fallback -> Icons.Default.Info
                     is AICoreStatus.Unsupported -> Icons.Default.Warning
                     is AICoreStatus.Error -> Icons.Default.Warning
                 }
                 Icon(
                     icon,
                     contentDescription = null,
-                    tint = if (status is AICoreStatus.Ready) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface
+                    tint = when (status) {
+                        is AICoreStatus.Ready -> Color(0xFF2E7D32)
+                        is AICoreStatus.Fallback -> Color(0xFFE65100)
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
                 )
             }
 
@@ -862,6 +868,7 @@ fun DiagnosticsCard(
                     is AICoreStatus.Ready -> "Gemini Nano hardware key binding successfully established."
                     is AICoreStatus.Checking -> "Scanning for local AICore engine..."
                     is AICoreStatus.Downloading -> "Syncing localized model packages: ${status.progressPercent}% downloaded."
+                    is AICoreStatus.Fallback -> status.message
                     is AICoreStatus.Unsupported -> "Missing Gemini Nano. On-device LLM model requires hardware upgrade."
                     is AICoreStatus.Error -> "Hardware key binding failed: ${status.message}"
                 }

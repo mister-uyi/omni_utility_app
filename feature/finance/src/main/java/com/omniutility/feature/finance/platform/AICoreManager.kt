@@ -22,6 +22,7 @@ sealed interface AICoreStatus {
     data class Downloading(val progressPercent: Int) : AICoreStatus
     data class Error(val message: String) : AICoreStatus
     object Unsupported : AICoreStatus
+    data class Fallback(val message: String) : AICoreStatus
 }
 
 @Singleton
@@ -91,7 +92,11 @@ class AICoreManager @Inject constructor(
                 } catch (e: Exception) {
                     android.util.Log.e("AICoreManager", "AICore engine preparation failed", e)
                     val msg = e.message ?: "AICore binding failed"
-                    _status.value = AICoreStatus.Error(msg)
+                    if (msg.contains("NOT_AVAILABLE", ignoreCase = true) || msg.contains("feature not found", ignoreCase = true)) {
+                        _status.value = AICoreStatus.Fallback("On-device model download pending. Safe offline fallback engine is active.")
+                    } else {
+                        _status.value = AICoreStatus.Error(msg)
+                    }
                 }
             }
 
