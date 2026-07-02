@@ -23,6 +23,7 @@ sealed interface AICoreStatus {
     data class Error(val message: String) : AICoreStatus
     object Unsupported : AICoreStatus
     data class Fallback(val message: String) : AICoreStatus
+    data class CloudActive(val keyPreview: String) : AICoreStatus
 }
 
 @Singleton
@@ -38,8 +39,20 @@ class AICoreManager @Inject constructor(
         checkSupportAndPrepare()
     }
 
+    fun notifyApiKeyUpdated() {
+        checkSupportAndPrepare()
+    }
+
     fun checkSupportAndPrepare() {
         _status.value = AICoreStatus.Checking
+
+        val prefs = context.getSharedPreferences("finance_prefs", Context.MODE_PRIVATE)
+        val apiKey = prefs.getString("gemini_api_key", "") ?: ""
+        if (apiKey.isNotEmpty()) {
+            val preview = if (apiKey.length > 8) apiKey.take(4) + "..." + apiKey.takeLast(4) else "Active"
+            _status.value = AICoreStatus.CloudActive(preview)
+            return
+        }
 
         // 1. Basic package check to see if AICore is present on the device
         val isPackageInstalled = try {

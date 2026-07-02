@@ -29,7 +29,8 @@ data class FinanceUiState(
     val searchQuery: String = "",
     val activeAccountId: String? = null,
     val goalAdvice: Map<String, String> = emptyMap(),
-    val isInsightsLoading: Boolean = false
+    val isInsightsLoading: Boolean = false,
+    val apiKey: String = ""
 )
 
 @HiltViewModel
@@ -44,6 +45,7 @@ class FinanceDashboardViewModel @Inject constructor(
     private val _insights = MutableStateFlow("Provide transactions to generate private offline insights.")
     private val _isInsightsLoading = MutableStateFlow(false)
     private val _goalAdvice = MutableStateFlow<Map<String, String>>(emptyMap())
+    private val _apiKey = MutableStateFlow(aiEngine.getApiKey())
 
     val uiState: StateFlow<FinanceUiState> = combine(
         aiCoreManager.status,
@@ -54,7 +56,8 @@ class FinanceDashboardViewModel @Inject constructor(
         _activeAccountId,
         _insights,
         _goalAdvice,
-        _isInsightsLoading
+        _isInsightsLoading,
+        _apiKey
     ) { flowValues: Array<Any?> ->
         val aiStatus = flowValues[0] as AICoreStatus
         val accounts = flowValues[1] as List<AccountContainerEntity>
@@ -65,6 +68,7 @@ class FinanceDashboardViewModel @Inject constructor(
         val insightsText = flowValues[6] as String
         val adviceMap = flowValues[7] as Map<String, String>
         val insightsLoading = flowValues[8] as Boolean
+        val apiKeyVal = flowValues[9] as String
         
         // Auto-select first account if activeId is null
         val selectedId = activeId ?: accounts.firstOrNull()?.containerId
@@ -96,7 +100,8 @@ class FinanceDashboardViewModel @Inject constructor(
             searchQuery = query,
             activeAccountId = selectedId,
             goalAdvice = adviceMap,
-            isInsightsLoading = insightsLoading
+            isInsightsLoading = insightsLoading,
+            apiKey = apiKeyVal
         )
     }.stateIn(
         scope = viewModelScope,
@@ -106,6 +111,11 @@ class FinanceDashboardViewModel @Inject constructor(
 
     fun selectAccount(accountId: String) {
         _activeAccountId.value = accountId
+    }
+
+    fun updateApiKey(key: String) {
+        aiEngine.saveApiKey(key)
+        _apiKey.value = key
     }
 
     fun updateSearchQuery(query: String) {

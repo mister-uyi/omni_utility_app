@@ -203,7 +203,8 @@ fun FinanceDashboardScreen(
                         onAddGoalClick = { showAddGoalDialog = true },
                         onDeleteGoal = { viewModel.deleteGoal(it) },
                         onFetchGoalAdvice = { viewModel.fetchGoalAdvice(it) },
-                        onDeleteMemoryLookup = { viewModel.deleteMemoryLookup(it) }
+                        onDeleteMemoryLookup = { viewModel.deleteMemoryLookup(it) },
+                        onSaveApiKey = { viewModel.updateApiKey(it) }
                     )
                 }
             }
@@ -662,7 +663,8 @@ fun VaultSetupTabContent(
     onAddGoalClick: () -> Unit,
     onDeleteGoal: (FinancialCompassGoalEntity) -> Unit,
     onFetchGoalAdvice: (FinancialCompassGoalEntity) -> Unit,
-    onDeleteMemoryLookup: (MemoryLookupEntity) -> Unit
+    onDeleteMemoryLookup: (MemoryLookupEntity) -> Unit,
+    onSaveApiKey: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -671,6 +673,72 @@ fun VaultSetupTabContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
+        // API Key Configuration Section
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "Gemini API Configuration",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Add a free API Key from Google AI Studio to run advanced transaction parsing and chats if on-device model is pending.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    var keyInput by remember { mutableStateOf(uiState.apiKey) }
+                    
+                    OutlinedTextField(
+                        value = keyInput,
+                        onValueChange = { keyInput = it },
+                        placeholder = { Text("Paste AQ. or AIzaSy key here...", fontSize = 13.sp) },
+                        label = { Text("Gemini API Key", fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        )
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (uiState.apiKey.isNotEmpty()) {
+                            TextButton(
+                                onClick = {
+                                    keyInput = ""
+                                    onSaveApiKey("")
+                                }
+                            ) {
+                                Text("Remove Key", color = MaterialTheme.colorScheme.error)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Button(
+                            onClick = { onSaveApiKey(keyInput.trim()) },
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Save Key")
+                        }
+                    }
+                }
+            }
+        }
+
         // Goals Setup Section
         item {
             Row(
@@ -930,6 +998,7 @@ fun DiagnosticsCard(
 ) {
     val containerColor = when (status) {
         is AICoreStatus.Ready -> Color(0xFF2E7D32).copy(alpha = 0.1f)
+        is AICoreStatus.CloudActive -> Color(0xFF1565C0).copy(alpha = 0.1f)
         is AICoreStatus.Checking, is AICoreStatus.Downloading -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         is AICoreStatus.Fallback -> Color(0xFFE65100).copy(alpha = 0.1f)
         is AICoreStatus.Unsupported -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
@@ -957,6 +1026,7 @@ fun DiagnosticsCard(
             ) {
                 val icon = when (status) {
                     is AICoreStatus.Ready -> Icons.Default.CheckCircle
+                    is AICoreStatus.CloudActive -> Icons.Default.CheckCircle
                     is AICoreStatus.Checking -> Icons.Default.Info
                     is AICoreStatus.Downloading -> Icons.Default.Refresh
                     is AICoreStatus.Fallback -> Icons.Default.Info
@@ -968,6 +1038,7 @@ fun DiagnosticsCard(
                     contentDescription = null,
                     tint = when (status) {
                         is AICoreStatus.Ready -> Color(0xFF2E7D32)
+                        is AICoreStatus.CloudActive -> Color(0xFF1565C0)
                         is AICoreStatus.Fallback -> Color(0xFFE65100)
                         else -> MaterialTheme.colorScheme.onSurface
                     }
@@ -975,9 +1046,14 @@ fun DiagnosticsCard(
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Text("On-Device AI Engine Status", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                val title = when (status) {
+                    is AICoreStatus.CloudActive -> "Gemini Cloud AI Status"
+                    else -> "On-Device AI Engine Status"
+                }
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 val description = when (status) {
                     is AICoreStatus.Ready -> "Gemini Nano hardware key binding successfully established."
+                    is AICoreStatus.CloudActive -> "Gemini 1.5 Flash API active (Key preview: ${status.keyPreview})."
                     is AICoreStatus.Checking -> "Scanning for local AICore engine..."
                     is AICoreStatus.Downloading -> "Syncing localized model packages: ${status.progressPercent}% downloaded."
                     is AICoreStatus.Fallback -> status.message

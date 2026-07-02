@@ -1,8 +1,10 @@
 package com.omniutility.feature.finance.data.ai
 
+import android.content.Context
 import com.google.ai.edge.aicore.GenerativeModel
 import com.google.ai.edge.aicore.content
 import com.omniutility.feature.finance.platform.AICoreManager
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -24,14 +26,77 @@ data class ParsedSearchFilters(
 
 @Singleton
 class OfflineAIEngine @Inject constructor(
-    private val aiCoreManager: AICoreManager
+    private val aiCoreManager: AICoreManager,
+    @ApplicationContext private val context: Context
 ) {
-    suspend fun parseTransaction(rawNarration: String): ParsedTransaction? = withContext(Dispatchers.Default) {
-        val model = aiCoreManager.getModel()
-        if (model == null) {
-            return@withContext parseTransactionMock(rawNarration)
-        }
+    private val prefs by lazy {
+        context.getSharedPreferences("finance_prefs", Context.MODE_PRIVATE)
+    }
+
+    fun getApiKey(): String {
+        return prefs.getString("gemini_api_key", "") ?: ""
+    }
+
+    fun saveApiKey(key: String) {
+        prefs.edit().putString("gemini_api_key", key).apply()
+        aiCoreManager.notifyApiKeyUpdated()
+    }
+
+    private suspend fun generateCloudContent(prompt: String): String? = withContext(Dispatchers.IO) {
+        val apiKey = getApiKey()
+        if (apiKey.isEmpty()) return@withContext null
         
+        try {
+            val url = java.net.URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${java.net.URLEncoder.encode(apiKey, "UTF-8")}")
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            
+            val escapedPrompt = org.json.JSONObject.quote(prompt)
+            val jsonBody = """
+                {
+                  "contents": [
+                    {
+                      "parts": [
+                        {
+                          "text": ${escapedPrompt}
+                        }
+                      ]
+                    }
+                  ]
+                }
+            """.trimIndent()
+            
+            conn.outputStream.use { os ->
+                os.write(jsonBody.toByteArray(Charsets.UTF_8))
+            }
+            
+            if (conn.responseCode == 200) {
+                val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                val jsonResponse = org.json.JSONObject(responseText)
+                val candidates = jsonResponse.optJSONArray("candidates")
+                if (candidates != null && candidates.length() > 0) {
+                    val firstCandidate = candidates.getJSONObject(0)
+                    val contentObj = firstCandidate.optJSONObject("content")
+                    if (contentObj != null) {
+                        val parts = contentObj.optJSONArray("parts")
+                        if (parts != null && parts.length() > 0) {
+                            return@withContext parts.getJSONObject(0).optString("text")
+                        }
+                    }
+                }
+            } else {
+                val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
+                android.util.Log.e("OfflineAIEngine", "Cloud API Error code: ${conn.responseCode}, body: $err")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("OfflineAIEngine", "Cloud API invocation failed", e)
+        }
+        null
+    }
+
+    suspend fun parseTransaction(rawNarration: String): ParsedTransaction? = withContext(Dispatchers.Default) {
         val prompt = """
             You are an offline transaction parser. Parse this transaction notification and output the details in the exact format shown below. Do not output any other text.
 
@@ -46,6 +111,16 @@ class OfflineAIEngine @Inject constructor(
             CATEGORY: <one of the Categories listed above>
         """.trimIndent()
 
+        val cloudResponse = generateCloudContent(prompt)
+        if (cloudResponse != null) {
+            return@withContext parseTransactionResponse(cloudResponse)
+        }
+
+        val model = aiCoreManager.getModel()
+        if (model == null) {
+            return@withContext parseTransactionMock(rawNarration)
+        }
+
         try {
             val response = model.generateContent(content { text(prompt) })
             val text = response.text ?: return@withContext null
@@ -57,11 +132,6 @@ class OfflineAIEngine @Inject constructor(
     }
 
     suspend fun parseSearchQuery(userQuery: String): ParsedSearchFilters? = withContext(Dispatchers.Default) {
-        val model = aiCoreManager.getModel()
-        if (model == null) {
-            return@withContext parseSearchQueryMock(userQuery)
-        }
-
         val prompt = """
             You are an offline query parser. Convert the user's financial search query into filter parameters. Output only the keys and values as specified. Do not output any other text.
 
@@ -75,6 +145,16 @@ class OfflineAIEngine @Inject constructor(
             TYPE: <CR for credit, DR for debit, or NONE>
         """.trimIndent()
 
+        val cloudResponse = generateCloudContent(prompt)
+        if (cloudResponse != null) {
+            return@withContext parseSearchResponse(cloudResponse)
+        }
+
+        val model = aiCoreManager.getModel()
+        if (model == null) {
+            return@withContext parseSearchQueryMock(userQuery)
+        }
+
         try {
             val response = model.generateContent(content { text(prompt) })
             val text = response.text ?: return@withContext null
@@ -86,11 +166,6 @@ class OfflineAIEngine @Inject constructor(
     }
 
     suspend fun generateInsights(transactionsSummary: String, goalsSummary: String): String = withContext(Dispatchers.Default) {
-        val model = aiCoreManager.getModel()
-        if (model == null) {
-            return@withContext generateInsightsMock(transactionsSummary, goalsSummary)
-        }
-
         val prompt = """
             You are a private offline finance advisor. Analyze the user's transactions and active goals, then provide 3 concise bullet-point insights. 
             Identify patterns, monthly forecasts, or anomalies. Do not use markdown styling other than bullets.
@@ -102,6 +177,16 @@ class OfflineAIEngine @Inject constructor(
             $goalsSummary
         """.trimIndent()
 
+        val cloudResponse = generateCloudContent(prompt)
+        if (cloudResponse != null) {
+            return@withContext cloudResponse
+        }
+
+        val model = aiCoreManager.getModel()
+        if (model == null) {
+            return@withContext generateInsightsMock(transactionsSummary, goalsSummary)
+        }
+
         try {
             val response = model.generateContent(content { text(prompt) })
             response.text ?: "No insights generated."
@@ -111,17 +196,22 @@ class OfflineAIEngine @Inject constructor(
     }
 
     suspend fun generateGoalAdvice(goalText: String, recentTransactionsSummary: String): String = withContext(Dispatchers.Default) {
-        val model = aiCoreManager.getModel()
-        if (model == null) {
-            return@withContext generateGoalAdviceMock(goalText)
-        }
-
         val prompt = """
             You are a private offline finance advisor. Provide a concise, actionable recommendation (max 2 sentences) on how the user can adjust their spend patterns to achieve this goal: "$goalText".
 
             Recent spend patterns:
             $recentTransactionsSummary
         """.trimIndent()
+
+        val cloudResponse = generateCloudContent(prompt)
+        if (cloudResponse != null) {
+            return@withContext cloudResponse
+        }
+
+        val model = aiCoreManager.getModel()
+        if (model == null) {
+            return@withContext generateGoalAdviceMock(goalText)
+        }
 
         try {
             val response = model.generateContent(content { text(prompt) })
@@ -132,11 +222,6 @@ class OfflineAIEngine @Inject constructor(
     }
 
     suspend fun parseTransactionChunk(textChunk: String): List<ParsedTransaction> = withContext(Dispatchers.Default) {
-        val model = aiCoreManager.getModel()
-        if (model == null) {
-            return@withContext parseTransactionChunkMock(textChunk)
-        }
-
         val prompt = """
             You are an offline finance statement parser. Convert the raw bank statement lines into a valid JSON array of transaction objects.
             Each object must contain keys: "amount" (double), "vendor" (string), "type" ("CR" for deposit, "DR" for debit), "category" (one of the Categories below).
@@ -147,6 +232,16 @@ class OfflineAIEngine @Inject constructor(
             Statement Lines:
             $textChunk
         """.trimIndent()
+
+        val cloudResponse = generateCloudContent(prompt)
+        if (cloudResponse != null) {
+            return@withContext parseJsonTransactions(cloudResponse)
+        }
+
+        val model = aiCoreManager.getModel()
+        if (model == null) {
+            return@withContext parseTransactionChunkMock(textChunk)
+        }
 
         try {
             val response = model.generateContent(content { text(prompt) })
@@ -159,6 +254,17 @@ class OfflineAIEngine @Inject constructor(
     }
 
     suspend fun generateChatReply(prompt: String, categoryContext: String?): String = withContext(Dispatchers.Default) {
+        val fullPrompt = if (categoryContext != null) {
+            "Category Context: $categoryContext\nUser Query: $prompt"
+        } else {
+            prompt
+        }
+
+        val cloudResponse = generateCloudContent(fullPrompt)
+        if (cloudResponse != null) {
+            return@withContext cloudResponse
+        }
+
         val model = aiCoreManager.getModel()
         if (model == null) {
             return@withContext generateChatReplyMock(prompt, categoryContext)
