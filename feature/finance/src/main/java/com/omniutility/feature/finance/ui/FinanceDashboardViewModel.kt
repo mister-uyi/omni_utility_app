@@ -30,7 +30,8 @@ data class FinanceUiState(
     val activeAccountId: String? = null,
     val goalAdvice: Map<String, String> = emptyMap(),
     val isInsightsLoading: Boolean = false,
-    val apiKey: String = ""
+    val apiKey: String = "",
+    val isProcessingStatement: Boolean = false
 )
 
 @HiltViewModel
@@ -57,7 +58,8 @@ class FinanceDashboardViewModel @Inject constructor(
         _insights,
         _goalAdvice,
         _isInsightsLoading,
-        _apiKey
+        _apiKey,
+        com.omniutility.feature.finance.data.service.StatementIngestionService.isProcessing
     ) { flowValues: Array<Any?> ->
         val aiStatus = flowValues[0] as AICoreStatus
         val accounts = flowValues[1] as List<AccountContainerEntity>
@@ -69,6 +71,7 @@ class FinanceDashboardViewModel @Inject constructor(
         val adviceMap = flowValues[7] as Map<String, String>
         val insightsLoading = flowValues[8] as Boolean
         val apiKeyVal = flowValues[9] as String
+        val isProcessingStatementVal = flowValues[10] as Boolean
         
         // Auto-select first account if activeId is null
         val selectedId = activeId ?: accounts.firstOrNull()?.containerId
@@ -101,7 +104,8 @@ class FinanceDashboardViewModel @Inject constructor(
             activeAccountId = selectedId,
             goalAdvice = adviceMap,
             isInsightsLoading = insightsLoading,
-            apiKey = apiKeyVal
+            apiKey = apiKeyVal,
+            isProcessingStatement = isProcessingStatementVal
         )
     }.stateIn(
         scope = viewModelScope,
@@ -116,6 +120,12 @@ class FinanceDashboardViewModel @Inject constructor(
     fun updateApiKey(key: String) {
         aiEngine.saveApiKey(key)
         _apiKey.value = key
+        
+        val welcomeText = if (key.isNotEmpty())
+            "Hi! I'm your Gemini AI assistant. Ask me anything about your expenses."
+        else
+            "Hi! I'm your offline Private AI. Ask me anything about your expenses."
+        _chatMessages.value = listOf(ChatMessage(welcomeText, false))
     }
 
     fun updateSearchQuery(query: String) {
@@ -186,7 +196,15 @@ class FinanceDashboardViewModel @Inject constructor(
     }
 
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(
-        listOf(ChatMessage("Hi! I'm your offline Private AI. Ask me anything about your expenses.", false))
+        listOf(
+            ChatMessage(
+                if (aiEngine.getApiKey().isNotEmpty())
+                    "Hi! I'm your Gemini AI assistant. Ask me anything about your expenses."
+                else
+                    "Hi! I'm your offline Private AI. Ask me anything about your expenses.",
+                false
+            )
+        )
     )
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages
 

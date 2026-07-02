@@ -362,8 +362,25 @@ fun HomeTabContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Ledger Transactions", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                if (uiState.transactions.isNotEmpty()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Ledger Transactions", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    if (uiState.isProcessingStatement) {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "Processing statement...",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+                if (uiState.transactions.isNotEmpty() && !uiState.isProcessingStatement) {
                     TextButton(onClick = onClearTransactions) {
                         Text("Clear All", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                     }
@@ -560,6 +577,14 @@ fun AnalyticsTabContent(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
+            val scrollState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+            androidx.compose.runtime.LaunchedEffect(chatMessages.size) {
+                if (chatMessages.isNotEmpty()) {
+                    scrollState.animateScrollToItem(chatMessages.size - 1)
+                }
+            }
+
             Column(modifier = Modifier.padding(12.dp)) {
                 // Header with context badge
                 Row(
@@ -579,6 +604,7 @@ fun AnalyticsTabContent(
 
                 // Chat history bubble
                 LazyColumn(
+                    state = scrollState,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),

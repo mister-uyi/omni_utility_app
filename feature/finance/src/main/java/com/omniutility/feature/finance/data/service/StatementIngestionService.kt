@@ -59,6 +59,8 @@ class StatementIngestionService : Service() {
             startForeground(notificationId, notification)
         }
 
+        _isProcessing.value = true
+
         serviceScope.launch {
             try {
                 processFile(uri, accountId)
@@ -270,7 +272,13 @@ class StatementIngestionService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
+        _isProcessing.value = false
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    companion object {
+        private val _isProcessing = kotlinx.coroutines.flow.MutableStateFlow(false)
+        val isProcessing: kotlinx.coroutines.flow.StateFlow<Boolean> = _isProcessing
+    }
 }
