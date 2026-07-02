@@ -237,8 +237,19 @@ class FinanceDashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             val transactions = uiState.value.transactions
+            val totalIncome = transactions.filter { it.type == "CR" }.sumOf { it.amount }
+            val totalExpenses = transactions.filter { it.type == "DR" }.sumOf { it.amount }
+            val balance = totalIncome - totalExpenses
+            val transactionCount = transactions.size
+
+            val categoryBreakdown = transactions
+                .groupBy { it.category }
+                .mapValues { entry -> entry.value.sumOf { it.amount } }
+                .entries
+                .joinToString("\n") { "- ${it.key}: ₦${String.format(java.util.Locale.US, "%,.2f", it.value)}" }
+
             val summaryText = transactions.take(1000).joinToString("\n") {
-                "- ${it.cleanedVendor}: ${it.type} ${it.amount} [${it.category}]"
+                "- ${it.cleanedVendor}: ${it.type} ₦${String.format(java.util.Locale.US, "%,.2f", it.amount)} [${it.category}]"
             }
             
             val customSystemPrompt = aiEngine.getBasePrompt()
@@ -253,7 +264,16 @@ class FinanceDashboardViewModel @Inject constructor(
                 Category Context: ${categoryContext ?: "None"}
                 User Question: "$messageText"
 
-                Transactions:
+                Verified Dashboard Metrics (Calculated mathematically, DO NOT count or sum raw transactions to guess these):
+                - Total Transactions Count: $transactionCount
+                - Total Ingested Income: ₦${String.format(java.util.Locale.US, "%,.2f", totalIncome)}
+                - Total Ingested Expenses: ₦${String.format(java.util.Locale.US, "%,.2f", totalExpenses)}
+                - Net Ledger Balance: ₦${String.format(java.util.Locale.US, "%,.2f", balance)}
+
+                Category-wise Spending Totals:
+                $categoryBreakdown
+
+                Raw Transaction History List:
                 $summaryText
             """.trimIndent()
 

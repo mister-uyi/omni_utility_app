@@ -74,7 +74,10 @@ class OfflineAIEngine @Inject constructor(
                             }
                           ]
                         }
-                      ]
+                      ],
+                      "generationConfig": {
+                        "temperature": 0.0
+                      }
                     }
                 """.trimIndent()
                 
