@@ -118,13 +118,7 @@ class FinanceDashboardViewModel @Inject constructor(
         }
     }
 
-    fun addRawTransaction(rawNarration: String) {
-        viewModelScope.launch {
-            val accountId = uiState.value.activeAccountId ?: return@launch
-            repository.addRawTransaction(accountId, rawNarration)
-            refreshInsights()
-        }
-    }
+
 
     fun updateTransactionCategory(transaction: TransactionRecordEntity, category: String) {
         viewModelScope.launch {

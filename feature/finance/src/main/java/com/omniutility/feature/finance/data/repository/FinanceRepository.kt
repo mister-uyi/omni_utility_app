@@ -5,6 +5,9 @@ import com.omniutility.feature.finance.data.ai.ParsedTransaction
 import com.omniutility.feature.finance.data.db.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,6 +20,17 @@ class FinanceRepository @Inject constructor(
     private val financialCompassGoalDao: FinancialCompassGoalDao,
     private val aiEngine: OfflineAIEngine
 ) {
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                if (accountContainerDao.getAll().isEmpty()) {
+                    createAccount("Default Wallet", "NGN", 0.0)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
     // --- Account Container Operations ---
     fun getAccountsFlow(): Flow<List<AccountContainerEntity>> = accountContainerDao.getAllFlow()
     

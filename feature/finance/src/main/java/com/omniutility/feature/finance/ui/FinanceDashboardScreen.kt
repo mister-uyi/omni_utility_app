@@ -169,7 +169,6 @@ fun FinanceDashboardScreen(
                         uiState = uiState,
                         onAddAccountClick = { showAddAccountDialog = true },
                         onAccountSelect = { viewModel.selectAccount(it) },
-                        onRawTransactionSubmit = { viewModel.addRawTransaction(it) },
                         onUpdateCategory = { trx, cat -> viewModel.updateTransactionCategory(trx, cat) },
                         onDeleteTransaction = { viewModel.deleteTransaction(it) },
                         onRetryDiagnostics = { viewModel.retryDiagnostics() }
@@ -226,7 +225,6 @@ fun HomeTabContent(
     uiState: FinanceUiState,
     onAddAccountClick: () -> Unit,
     onAccountSelect: (String) -> Unit,
-    onRawTransactionSubmit: (String) -> Unit,
     onUpdateCategory: (TransactionRecordEntity, String) -> Unit,
     onDeleteTransaction: (TransactionRecordEntity) -> Unit,
     onRetryDiagnostics: () -> Unit
@@ -321,10 +319,7 @@ fun HomeTabContent(
             }
         }
 
-        // SMS / Raw Statement Input Ingestion Box
-        item {
-            SMSIngestionCard(onRawTransactionSubmit)
-        }
+
 
         // Transaction list
         item {
@@ -916,7 +911,7 @@ fun FinancialDeltaCard(
                         String.format(Locale.getDefault(), "$%.2f", income),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
-                        color = Color(0xFF2E7D32)
+                        color = Color(0xFF1B5E20)
                     )
                 }
                 Column {
@@ -925,7 +920,7 @@ fun FinancialDeltaCard(
                         String.format(Locale.getDefault(), "$%.2f", expenses),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
-                        color = MaterialTheme.colorScheme.error
+                        color = Color(0xFFB71C1C)
                     )
                 }
                 Column {
@@ -934,7 +929,7 @@ fun FinancialDeltaCard(
                         String.format(Locale.getDefault(), "$%.2f", netDelta),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
-                        color = if (netDelta >= 0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                        color = if (netDelta >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
                     )
                 }
             }
@@ -942,42 +937,7 @@ fun FinancialDeltaCard(
     }
 }
 
-@Composable
-fun SMSIngestionCard(
-    onRawTransactionSubmit: (String) -> Unit
-) {
-    var rawText by remember { mutableStateOf("") }
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("SMS Transaction Ingestion", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text("Simulate transaction SMS parse entirely offline via local LLM.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-            OutlinedTextField(
-                value = rawText,
-                onValueChange = { rawText = it },
-                placeholder = { Text("e.g., Credit: USD 50.00 from Work salary on June 30...", fontSize = 12.sp) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
-
-            Button(
-                onClick = {
-                    if (rawText.trim().isNotEmpty()) {
-                        onRawTransactionSubmit(rawText)
-                        rawText = ""
-                    }
-                },
-                modifier = Modifier.align(Alignment.End),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("Ingest SMS", fontSize = 12.sp)
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1029,7 +989,7 @@ fun TransactionItemCard(
                         text = transaction.category,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(MaterialTheme.colorScheme.primaryContainer)
