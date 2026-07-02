@@ -232,8 +232,8 @@ fun FinanceDashboardScreen(
             if (showAddGoalDialog) {
                 AddGoalDialog(
                     onDismiss = { showAddGoalDialog = false },
-                    onConfirm = { text, cat, cap, days ->
-                        viewModel.addGoal(text, cat, cap, days)
+                    onConfirm = { text, extraInfo ->
+                        viewModel.addGoal(text, extraInfo, 0.0, 0)
                         showAddGoalDialog = false
                     }
                 )
@@ -959,22 +959,27 @@ fun VaultSetupTabContent(
                         ) {
                             Column {
                                 Text(goal.goalText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                if (goal.categoryRestriction != null) {
-                                    Text("Category: ${goal.categoryRestriction}", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                                if (!goal.categoryRestriction.isNullOrEmpty()) {
+                                    Text("Extra Info: ${goal.categoryRestriction}", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                             IconButton(onClick = { onDeleteGoal(goal) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Target: " + String.format(Locale.getDefault(), "$%.2f", goal.targetCap),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        val dateText = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(goal.endDate))
-                        Text("Deadline: $dateText", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (goal.targetCap > 0.0) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Target: " + String.format(Locale.getDefault(), "$%.2f", goal.targetCap),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        if (goal.endDate > 0L) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val dateText = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(goal.endDate))
+                            Text("Deadline: $dateText", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
                         val advice = uiState.goalAdvice[goal.goalId]
@@ -1557,30 +1562,36 @@ fun AddAccountDialog(
 @Composable
 fun AddGoalDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String, String?, Double, Int) -> Unit
+    onConfirm: (String, String?) -> Unit
 ) {
     var text by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("") }
-    var capText by remember { mutableStateOf("") }
-    var daysText by remember { mutableStateOf("") }
+    var extraInfo by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("New Financial Goal") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("Goal (e.g. Save $500 for rent)") })
-                OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category Restriction (Optional)") })
-                OutlinedTextField(value = capText, onValueChange = { capText = it }, label = { Text("Target Capital Cap") })
-                OutlinedTextField(value = daysText, onValueChange = { daysText = it }, label = { Text("Duration in Days") })
+                OutlinedTextField(
+                    value = text, 
+                    onValueChange = { text = it }, 
+                    label = { Text("Goal (e.g. Save ₦500k for rent)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = extraInfo, 
+                    onValueChange = { extraInfo = it }, 
+                    label = { Text("Extra info (Optional)") },
+                    placeholder = { Text("e.g. By end of December, exclude salary") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
             }
         },
         confirmButton = {
             Button(onClick = {
-                val cap = capText.toDoubleOrNull() ?: 0.0
-                val days = daysText.toIntOrNull() ?: 30
                 if (text.isNotEmpty()) {
-                    onConfirm(text, category.takeIf { it.isNotEmpty() }, cap, days)
+                    onConfirm(text, extraInfo.takeIf { it.isNotEmpty() })
                 }
             }) {
                 Text("Set Goal")

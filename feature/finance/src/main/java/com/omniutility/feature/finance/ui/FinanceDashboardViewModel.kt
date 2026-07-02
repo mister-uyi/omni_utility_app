@@ -196,7 +196,12 @@ class FinanceDashboardViewModel @Inject constructor(
 
     fun fetchGoalAdvice(goal: FinancialCompassGoalEntity) {
         viewModelScope.launch {
-            val advice = repository.fetchGoalAdvice(goal.goalText)
+            val fullGoalText = if (!goal.categoryRestriction.isNullOrEmpty()) {
+                "${goal.goalText} (Extra Info: ${goal.categoryRestriction})"
+            } else {
+                goal.goalText
+            }
+            val advice = repository.fetchGoalAdvice(fullGoalText)
             _goalAdvice.value = _goalAdvice.value + (goal.goalId to advice)
         }
     }
