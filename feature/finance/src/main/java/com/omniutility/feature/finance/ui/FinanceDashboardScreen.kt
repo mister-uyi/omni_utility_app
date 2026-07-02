@@ -176,13 +176,19 @@ fun FinanceDashboardScreen(
         modifier = modifier.fillMaxSize()
     ) { padding ->
         val density = LocalDensity.current
-        val isKeyboardOpen = WindowInsets.ime.getBottom(density) > 0
+        val keyboardHeightDp = with(density) { WindowInsets.ime.getBottom(density).toDp() }
+        val bottomBarPadding = padding.calculateBottomPadding()
+        val dynamicBottomPadding = if (activeTab == FinanceTab.Analytics || activeTab == FinanceTab.Vault) {
+            if (bottomBarPadding > keyboardHeightDp) bottomBarPadding - keyboardHeightDp else 0.dp
+        } else {
+            bottomBarPadding
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
                     top = padding.calculateTopPadding(),
-                    bottom = if (isKeyboardOpen && (activeTab == FinanceTab.Analytics || activeTab == FinanceTab.Vault)) 0.dp else padding.calculateBottomPadding()
+                    bottom = dynamicBottomPadding
                 )
         ) {
             when (activeTab) {
