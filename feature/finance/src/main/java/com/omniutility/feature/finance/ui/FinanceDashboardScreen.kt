@@ -47,6 +47,16 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+fun getCurrencySymbol(bankCode: String): String {
+    return when (bankCode.uppercase()) {
+        "NGN", "₦" -> "₦"
+        "USD", "$" -> "$"
+        "EUR", "€" -> "€"
+        "GBP", "£" -> "£"
+        else -> "$"
+    }
+}
+
 enum class FinanceTab {
     Home, Analytics, Vault
 }
@@ -231,6 +241,11 @@ fun HomeTabContent(
     onClearTransactions: () -> Unit,
     onRetryDiagnostics: () -> Unit
 ) {
+    val activeAccount = uiState.accounts.find { it.containerId == uiState.activeAccountId }
+    val currencySymbol = activeAccount?.let { getCurrencySymbol(it.bankCode) } ?: "$"
+    var showGrouped by remember { mutableStateOf(false) }
+    val expandedMerchants = remember { mutableStateMapOf<String, Boolean>() }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -248,14 +263,14 @@ fun HomeTabContent(
             val income = uiState.transactions.filter { it.type == "CR" }.sumOf { it.amount }
             val expenses = uiState.transactions.filter { it.type == "DR" }.sumOf { it.amount }
             val netDelta = income - expenses
-            val activeAccount = uiState.accounts.find { it.containerId == uiState.activeAccountId }
             val currentBalance = activeAccount?.currentBalance ?: 0.0
 
             FinancialDeltaCard(
                 currentBalance = currentBalance,
                 income = income,
                 expenses = expenses,
-                netDelta = netDelta
+                netDelta = netDelta,
+                currencySymbol = currencySymbol
             )
         }
 
@@ -313,7 +328,7 @@ fun HomeTabContent(
                                 Text(account.bankCode, fontSize = 11.sp, color = secondaryColor)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    String.format(Locale.getDefault(), "$%.2f", account.currentBalance),
+                                    String.format(Locale.getDefault(), "%s%,.2f", getCurrencySymbol(account.bankCode), account.currentBalance),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = balanceColor
@@ -324,8 +339,6 @@ fun HomeTabContent(
                 }
             }
         }
-
-
 
         // Transaction list header with count and clear button
         item {
@@ -359,6 +372,48 @@ fun HomeTabContent(
             }
         }
 
+        // Segmented Control for Detailed vs Grouped
+        if (uiState.transactions.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val buttonModifier = Modifier.weight(1f)
+                    
+                    Button(
+                        onClick = { showGrouped = false },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (!showGrouped) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            contentColor = if (!showGrouped) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        shape = RoundedCornerShape(6.dp),
+                        contentPadding = PaddingValues(vertical = 6.dp),
+                        modifier = buttonModifier
+                    ) {
+                        Text("Detailed List", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    
+                    Button(
+                        onClick = { showGrouped = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (showGrouped) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            contentColor = if (showGrouped) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        shape = RoundedCornerShape(6.dp),
+                        contentPadding = PaddingValues(vertical = 6.dp),
+                        modifier = buttonModifier
+                    ) {
+                        Text("Grouped View", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
         if (uiState.transactions.isEmpty()) {
             item {
                 Card(
@@ -373,6 +428,21 @@ fun HomeTabContent(
                     )
                 }
             }
+        } else if (showGrouped) {
+            val groupedTrxs = uiState.transactions.groupBy { it.cleanedVendor }
+            items(groupedTrxs.keys.toList()) { vendor ->
+                val trxs = groupedTrxs[vendor].orEmpty()
+                val isExpanded = expandedMerchants[vendor] ?: false
+                GroupedMerchantCard(
+                    vendor = vendor,
+                    transactions = trxs,
+                    currencySymbol = currencySymbol,
+                    isExpanded = isExpanded,
+                    onToggleExpand = { expandedMerchants[vendor] = !isExpanded },
+                    onUpdateCategory = onUpdateCategory,
+                    onDeleteTransaction = onDeleteTransaction
+                )
+            }
         } else {
             items(
                 items = uiState.transactions,
@@ -382,7 +452,8 @@ fun HomeTabContent(
                     transaction = trx,
                     onUpdateCategory = { onUpdateCategory(trx, it) },
                     onDelete = { onDeleteTransaction(trx) },
-                    modifier = Modifier.animateItem()
+                    modifier = Modifier.animateItem(),
+                    currencySymbol = currencySymbol
                 )
             }
         }
@@ -921,7 +992,8 @@ fun FinancialDeltaCard(
     currentBalance: Double,
     income: Double,
     expenses: Double,
-    netDelta: Double
+    netDelta: Double,
+    currencySymbol: String = "$"
 ) {
     Card(
         shape = RoundedCornerShape(24.dp),
@@ -931,7 +1003,7 @@ fun FinancialDeltaCard(
         Column(modifier = Modifier.padding(20.dp)) {
             Text("Ledger Balance", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
             Text(
-                text = String.format(Locale.getDefault(), "$%.2f", currentBalance),
+                text = String.format(Locale.getDefault(), "%s%,.2f", currencySymbol, currentBalance),
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -945,7 +1017,7 @@ fun FinancialDeltaCard(
                 Column {
                     Text("Income", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(
-                        String.format(Locale.getDefault(), "$%.2f", income),
+                        String.format(Locale.getDefault(), "%s%,.2f", currencySymbol, income),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = Color(0xFF1B5E20)
@@ -954,7 +1026,7 @@ fun FinancialDeltaCard(
                 Column {
                     Text("Expenses", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(
-                        String.format(Locale.getDefault(), "$%.2f", expenses),
+                        String.format(Locale.getDefault(), "%s%,.2f", currencySymbol, expenses),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = Color(0xFFB71C1C)
@@ -963,11 +1035,130 @@ fun FinancialDeltaCard(
                 Column {
                     Text("Net Delta", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(
-                        String.format(Locale.getDefault(), "$%.2f", netDelta),
+                        String.format(Locale.getDefault(), "%s%s%,.2f", if (netDelta >= 0) "+" else "-", currencySymbol, kotlin.math.abs(netDelta)),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = if (netDelta >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GroupedMerchantCard(
+    vendor: String,
+    transactions: List<TransactionRecordEntity>,
+    currencySymbol: String,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    onUpdateCategory: (TransactionRecordEntity, String) -> Unit,
+    onDeleteTransaction: (TransactionRecordEntity) -> Unit
+) {
+    val totalNet = transactions.sumOf { if (it.type == "CR") it.amount else -it.amount }
+    val count = transactions.size
+    val mainCategory = transactions.firstOrNull()?.category ?: "Others"
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggleExpand() },
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (totalNet >= 0) Color(0xFF2E7D32).copy(alpha = 0.1f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (totalNet >= 0) Icons.Default.CheckCircle else Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = if (totalNet >= 0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(vendor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("$count transactions • $mainCategory", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
+                val prefix = if (totalNet >= 0) "+" else "-"
+                val absAmount = kotlin.math.abs(totalNet)
+                val color = if (totalNet >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = String.format(Locale.getDefault(), "%s%s%,.2f", prefix, currencySymbol, absAmount),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = color
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            if (isExpanded) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    transactions.forEach { trx ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                val dateText = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault()).format(Date(trx.timestamp))
+                                Text(dateText, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val trxPrefix = if (trx.type == "CR") "+" else "-"
+                                val trxColor = if (trx.type == "CR") Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                                Text(
+                                    text = String.format(Locale.getDefault(), "%s%s%,.2f", trxPrefix, currencySymbol, trx.amount),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = trxColor
+                                )
+                                IconButton(
+                                    onClick = { onDeleteTransaction(trx) },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -982,7 +1173,8 @@ fun TransactionItemCard(
     transaction: TransactionRecordEntity,
     onUpdateCategory: (String) -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    currencySymbol: String = "$"
 ) {
     var expanded by remember { mutableStateOf(false) }
     val categories = listOf("Food & Dining", "Shopping", "Groceries", "Utilities & Bills", "Transport & Travel", "Entertainment", "Income & Salary", "Others")
@@ -1050,9 +1242,9 @@ fun TransactionItemCard(
 
             Column(horizontalAlignment = Alignment.End) {
                 val prefix = if (transaction.type == "CR") "+" else "-"
-                val color = if (transaction.type == "CR") Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                val color = if (transaction.type == "CR") Color(0xFF1B5E20) else Color(0xFFB71C1C)
                 Text(
-                    text = String.format(Locale.getDefault(), "%s$%.2f", prefix, transaction.amount),
+                    text = String.format(Locale.getDefault(), "%s%s%,.2f", prefix, currencySymbol, transaction.amount),
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = color
