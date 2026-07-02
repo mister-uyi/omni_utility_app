@@ -80,7 +80,8 @@ fun FinanceDashboardScreen(
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedCategoryContext by remember { mutableStateOf<String?>(null) }
     val density = LocalDensity.current
-    val isKeyboardOpen = WindowInsets.ime.getBottom(density) > 0
+    val keyboardHeightDp = with(density) { WindowInsets.ime.getBottom(density).toDp() }
+    val isKeyboardActiveForNavHide = keyboardHeightDp > 100.dp
     // System Back Gesture / Physical back button handler
     androidx.activity.compose.BackHandler(enabled = true) {
         if (activeTab != FinanceTab.Home) {
@@ -137,7 +138,7 @@ fun FinanceDashboardScreen(
             )
         },
         bottomBar = {
-            if (!isKeyboardOpen) {
+            if (!isKeyboardActiveForNavHide) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ) {
