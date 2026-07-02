@@ -227,7 +227,7 @@ class FinanceDashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             val transactions = uiState.value.transactions
-            val summaryText = transactions.take(15).joinToString("\n") {
+            val summaryText = transactions.take(1000).joinToString("\n") {
                 "- ${it.cleanedVendor}: ${it.type} ${it.amount} [${it.category}]"
             }
             

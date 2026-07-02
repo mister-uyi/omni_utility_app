@@ -259,7 +259,7 @@ class FinanceRepository @Inject constructor(
 
         // Aggregate transactions for the prompt context
         val summaryBuilder = StringBuilder()
-        transactions.take(20).forEach {
+        transactions.take(1000).forEach {
             summaryBuilder.append("- ${it.cleanedVendor}: ${it.type} ${it.amount} [${it.category}]\n")
         }
 
@@ -274,7 +274,7 @@ class FinanceRepository @Inject constructor(
     suspend fun fetchGoalAdvice(goalText: String): String {
         val transactions = transactionRecordDao.getAll()
         val summaryBuilder = StringBuilder()
-        transactions.take(10).forEach {
+        transactions.take(1000).forEach {
             summaryBuilder.append("- ${it.cleanedVendor}: ${it.type} ${it.amount} [${it.category}]\n")
         }
         return aiEngine.generateGoalAdvice(goalText, summaryBuilder.toString())
