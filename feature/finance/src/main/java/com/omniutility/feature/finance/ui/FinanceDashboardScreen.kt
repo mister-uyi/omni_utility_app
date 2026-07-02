@@ -101,28 +101,7 @@ fun FinanceDashboardScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Private AI Finance", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        // Airplane mode isolation shield status pill
-                        val isCloud = uiState.apiKey.isNotEmpty()
-                        val badgeColor = if (isCloud) Color(0xFF1565C0) else Color(0xFF2E7D32)
-                        val badgeText = if (isCloud) "Cloud Hybrid" else "Offline Shield"
-                        val badgeIcon = if (isCloud) Icons.Default.CheckCircle else Icons.Default.Lock
-
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(badgeColor.copy(alpha = 0.15f))
-                                .border(1.dp, badgeColor, CircleShape)
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(badgeIcon, contentDescription = null, tint = badgeColor, modifier = Modifier.size(10.dp))
-                                Text(badgeText, color = badgeColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
+                    Text("Private AI Finance", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -130,6 +109,8 @@ fun FinanceDashboardScreen(
                     }
                 },
                 actions = {
+                    AppBarAiStatus(status = uiState.aiCoreStatus, onRetryClick = { viewModel.retryDiagnostics() })
+                    Spacer(modifier = Modifier.width(4.dp))
                     IconButton(onClick = { viewModel.refreshInsights() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh Insights")
                     }
@@ -187,8 +168,7 @@ fun FinanceDashboardScreen(
                         onAccountSelect = { viewModel.selectAccount(it) },
                         onUpdateCategory = { trx, cat -> viewModel.updateTransactionCategory(trx, cat) },
                         onDeleteTransaction = { viewModel.deleteTransaction(it) },
-                        onClearTransactions = { viewModel.clearTransactions() },
-                        onRetryDiagnostics = { viewModel.retryDiagnostics() }
+                        onClearTransactions = { viewModel.clearTransactions() }
                     )
                 }
                 FinanceTab.Analytics -> {
@@ -209,7 +189,8 @@ fun FinanceDashboardScreen(
                         onDeleteGoal = { viewModel.deleteGoal(it) },
                         onFetchGoalAdvice = { viewModel.fetchGoalAdvice(it) },
                         onDeleteMemoryLookup = { viewModel.deleteMemoryLookup(it) },
-                        onSaveApiKey = { viewModel.updateApiKey(it) }
+                        onSaveApiKey = { viewModel.updateApiKey(it) },
+                        onSaveBasePrompt = { viewModel.updateBasePrompt(it) }
                     )
                 }
             }
@@ -246,8 +227,7 @@ fun HomeTabContent(
     onAccountSelect: (String) -> Unit,
     onUpdateCategory: (TransactionRecordEntity, String) -> Unit,
     onDeleteTransaction: (TransactionRecordEntity) -> Unit,
-    onClearTransactions: () -> Unit,
-    onRetryDiagnostics: () -> Unit
+    onClearTransactions: () -> Unit
 ) {
     val activeAccount = uiState.accounts.find { it.containerId == uiState.activeAccountId }
     val currencySymbol = activeAccount?.let { getCurrencySymbol(it.bankCode) } ?: "$"
@@ -272,7 +252,6 @@ fun HomeTabContent(
                     .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                DiagnosticsCard(uiState.aiCoreStatus, onRetryDiagnostics)
                 
                 val income = uiState.transactions.filter { it.type == "CR" }.sumOf { it.amount }
                 val expenses = uiState.transactions.filter { it.type == "DR" }.sumOf { it.amount }
@@ -488,160 +467,233 @@ fun AnalyticsTabContent(
     onClearCategoryContext: () -> Unit,
     onSendChatMessage: (String) -> Unit
 ) {
+    val scrollState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    androidx.compose.runtime.LaunchedEffect(chatMessages.size) {
+        if (chatMessages.isNotEmpty()) {
+            scrollState.animateScrollToItem(chatMessages.size - 1)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // AI Insights Text banner
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("AI Contextual Insights", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                if (uiState.isInsightsLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                } else {
-                    Text(uiState.insights, fontSize = 12.sp, lineHeight = 16.sp)
-                }
-            }
-        }
-
-        // Charts scrollable
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Interactive Expense Distribution Pie Chart
-            val categorySum = uiState.transactions.filter { it.type == "DR" }
-                .groupBy { it.category }
-                .mapValues { entry -> entry.value.sumOf { it.amount } }
-
-            Card(
+        // Pinned context category label at top if active
+        if (selectedCategoryContext != null) {
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(220.dp),
-                shape = RoundedCornerShape(16.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Expense Distribution", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    PieChart(
-                        data = categorySum,
-                        modifier = Modifier.fillMaxSize(),
-                        onSliceClick = onCategorySelect
-                    )
-                }
-            }
-
-            // Cash flow velocity line chart
-            val cashFlowPoints = remember(uiState.transactions) {
-                var bal = 0.0
-                uiState.transactions.sortedBy { it.timestamp }.map {
-                    bal += if (it.type == "CR") it.amount else -it.amount
-                    bal
-                }
-            }
-
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(220.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Velocity Cash Flow", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    LineChart(
-                        points = cashFlowPoints,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
+                Text(
+                    text = "Focused on Category: $selectedCategoryContext",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                IconButton(onClick = onClearCategoryContext, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Clear Context",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
         }
 
-        // Contextual AI Chat overlay at bottom of screen
+        // Chat Container occupying full remaining height
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
         ) {
-            val scrollState = androidx.compose.foundation.lazy.rememberLazyListState()
-
-            androidx.compose.runtime.LaunchedEffect(chatMessages.size) {
-                if (chatMessages.isNotEmpty()) {
-                    scrollState.animateScrollToItem(chatMessages.size - 1)
-                }
-            }
-
-            Column(modifier = Modifier.padding(12.dp)) {
-                // Header with context badge
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxSize()
+            ) {
+                // Header details
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Context-Aware Assistant", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    if (selectedCategoryContext != null) {
-                        SuggestionChip(
-                            onClick = onClearCategoryContext,
-                            label = { Text("Category: $selectedCategoryContext") },
-                            icon = { Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(12.dp)) }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(
+                            Icons.Default.CheckCircle, 
+                            contentDescription = null, 
+                            tint = if (uiState.apiKey.isNotEmpty()) Color(0xFF1565C0) else Color(0xFF2E7D32),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = if (uiState.apiKey.isNotEmpty()) "Gemini AI Agent" else "On-Device Assistant",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
                         )
                     }
+                    Text(
+                        text = "Context: ${uiState.transactions.size} transactions",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
-                // Chat history bubble
-                LazyColumn(
-                    state = scrollState,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(chatMessages) { chat ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp),
-                            contentAlignment = if (chat.isUser) Alignment.CenterEnd else Alignment.CenterStart
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        if (chat.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer
-                                    )
-                                    .padding(10.dp)
+                Divider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+                )
+
+                // Scrollable Chat area
+                Box(modifier = Modifier.weight(1f)) {
+                    LazyColumn(
+                        state = scrollState,
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(chatMessages) { chat ->
+                            val isUser = chat.isUser
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+                                verticalAlignment = Alignment.Top
                             ) {
-                                Text(
-                                    text = chat.text,
-                                    color = if (chat.isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
-                                    fontSize = 12.sp
-                                )
+                                if (!isUser) {
+                                    // Gemini-style logo block on the left
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (uiState.apiKey.isNotEmpty()) Color(0xFF1565C0).copy(alpha = 0.15f) else Color(0xFF2E7D32).copy(alpha = 0.15f)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle, 
+                                            contentDescription = null, 
+                                            tint = if (uiState.apiKey.isNotEmpty()) Color(0xFF1565C0) else Color(0xFF2E7D32),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+
+                                Card(
+                                    shape = RoundedCornerShape(
+                                        topStart = 16.dp,
+                                        topEnd = 16.dp,
+                                        bottomStart = if (isUser) 16.dp else 4.dp,
+                                        bottomEnd = if (isUser) 4.dp else 16.dp
+                                    ),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isUser) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                                        }
+                                    ),
+                                    modifier = Modifier.widthIn(max = 280.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text(
+                                            text = chat.text,
+                                            color = if (isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
+                                            fontSize = 13.sp,
+                                            lineHeight = 18.sp
+                                        )
+                                    }
+                                }
+
+                                if (isUser) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    // User profile initial / circle
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primaryContainer),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "U", 
+                                            fontWeight = FontWeight.Bold, 
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // If empty chat history, show helper suggestion prompt cards
+                    if (chatMessages.size <= 1) {
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(horizontal = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = "How can I help you today?",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 18.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                            )
+                            
+                            val suggestions = listOf(
+                                "Analyze my recent transactions",
+                                "Categorize my spending",
+                                "Am I saving enough?"
+                            )
+                            
+                            suggestions.forEach { prompt ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onSendChatMessage(prompt) },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(prompt, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.Send, 
+                                            contentDescription = null, 
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
 
-                // Input bar
+                // Chat Input bar
                 var textInput by remember { mutableStateOf("") }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp),
+                        .padding(top = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -651,15 +703,18 @@ fun AnalyticsTabContent(
                         placeholder = { 
                             Text(
                                 if (uiState.apiKey.isNotEmpty()) "Ask Gemini..." else "Ask something offline...", 
-                                fontSize = 12.sp
+                                fontSize = 13.sp
                             ) 
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(28.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent
-                        )
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                        ),
+                        singleLine = true
                     )
                     IconButton(
                         onClick = {
@@ -671,7 +726,12 @@ fun AnalyticsTabContent(
                         colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send, 
+                            contentDescription = "Send", 
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -687,7 +747,8 @@ fun VaultSetupTabContent(
     onDeleteGoal: (FinancialCompassGoalEntity) -> Unit,
     onFetchGoalAdvice: (FinancialCompassGoalEntity) -> Unit,
     onDeleteMemoryLookup: (MemoryLookupEntity) -> Unit,
-    onSaveApiKey: (String) -> Unit
+    onSaveApiKey: (String) -> Unit,
+    onSaveBasePrompt: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -756,6 +817,73 @@ fun VaultSetupTabContent(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text("Save Key")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Custom AI Persona / Base System Prompt Section
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "AI Persona / Base System Prompt",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Define custom rules, guidelines, or a specific persona (e.g. strict savings coach, detailed accountant) for how Gemini answers questions on the Analytics screen.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    var promptInput by remember { mutableStateOf(uiState.basePrompt) }
+                    
+                    OutlinedTextField(
+                        value = promptInput,
+                        onValueChange = { promptInput = it },
+                        placeholder = { Text("E.g. You are a strict savings coach. Talk in a highly motivating tone...", fontSize = 13.sp) },
+                        label = { Text("Base System Instruction", fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        maxLines = 6,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        )
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (uiState.basePrompt.isNotEmpty()) {
+                            TextButton(
+                                onClick = {
+                                    promptInput = ""
+                                    onSaveBasePrompt("")
+                                }
+                            ) {
+                                Text("Reset Default", color = MaterialTheme.colorScheme.error)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Button(
+                            onClick = { onSaveBasePrompt(promptInput.trim()) },
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Save Prompt")
                         }
                     }
                 }
@@ -1112,9 +1240,9 @@ fun FinancialDeltaCard(
             Text("Ledger Balance", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
             Text(
                 text = String.format(Locale.getDefault(), "%s%,.2f", currencySymbol, currentBalance),
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Black,
+                color = Color.Black
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1437,3 +1565,50 @@ fun AddGoalDialog(
         }
     )
 }
+
+@Composable
+fun AppBarAiStatus(
+    status: AICoreStatus,
+    onRetryClick: () -> Unit
+) {
+    val badgeColor = when (status) {
+        is AICoreStatus.Ready -> Color(0xFF2E7D32)
+        is AICoreStatus.CloudActive -> Color(0xFF1565C0)
+        is AICoreStatus.Checking, is AICoreStatus.Downloading -> Color.Gray
+        is AICoreStatus.Fallback -> Color(0xFFE65100)
+        else -> MaterialTheme.colorScheme.error
+    }
+    
+    val badgeText = when (status) {
+        is AICoreStatus.Ready -> "Nano Active"
+        is AICoreStatus.CloudActive -> "Gemini Active"
+        is AICoreStatus.Checking -> "AI checking..."
+        is AICoreStatus.Downloading -> "AI syncing..."
+        is AICoreStatus.Fallback -> "Rules active"
+        else -> "AI Error"
+    }
+
+    val badgeIcon = when (status) {
+        is AICoreStatus.Ready, is AICoreStatus.CloudActive -> Icons.Default.CheckCircle
+        is AICoreStatus.Checking, is AICoreStatus.Downloading -> Icons.Default.Refresh
+        else -> Icons.Default.Warning
+    }
+
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(badgeColor.copy(alpha = 0.15f))
+            .border(1.dp, badgeColor, CircleShape)
+            .clickable(enabled = status is AICoreStatus.Error || status is AICoreStatus.Unsupported) {
+                onRetryClick()
+            }
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Icon(badgeIcon, contentDescription = null, tint = badgeColor, modifier = Modifier.size(12.dp))
+            Text(badgeText, color = badgeColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+

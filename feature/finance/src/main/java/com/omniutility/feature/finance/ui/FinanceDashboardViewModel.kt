@@ -31,7 +31,8 @@ data class FinanceUiState(
     val goalAdvice: Map<String, String> = emptyMap(),
     val isInsightsLoading: Boolean = false,
     val apiKey: String = "",
-    val isProcessingStatement: Boolean = false
+    val isProcessingStatement: Boolean = false,
+    val basePrompt: String = ""
 )
 
 @HiltViewModel
@@ -47,6 +48,7 @@ class FinanceDashboardViewModel @Inject constructor(
     private val _isInsightsLoading = MutableStateFlow(false)
     private val _goalAdvice = MutableStateFlow<Map<String, String>>(emptyMap())
     private val _apiKey = MutableStateFlow(aiEngine.getApiKey())
+    private val _basePrompt = MutableStateFlow(aiEngine.getBasePrompt())
 
     val uiState: StateFlow<FinanceUiState> = combine(
         aiCoreManager.status,
@@ -59,7 +61,8 @@ class FinanceDashboardViewModel @Inject constructor(
         _goalAdvice,
         _isInsightsLoading,
         _apiKey,
-        com.omniutility.feature.finance.data.service.StatementIngestionService.isProcessing
+        com.omniutility.feature.finance.data.service.StatementIngestionService.isProcessing,
+        _basePrompt
     ) { flowValues: Array<Any?> ->
         val aiStatus = flowValues[0] as AICoreStatus
         val accounts = flowValues[1] as List<AccountContainerEntity>
@@ -72,6 +75,7 @@ class FinanceDashboardViewModel @Inject constructor(
         val insightsLoading = flowValues[8] as Boolean
         val apiKeyVal = flowValues[9] as String
         val isProcessingStatementVal = flowValues[10] as Boolean
+        val basePromptVal = flowValues[11] as String
         
         // Auto-select first account if activeId is null
         val selectedId = activeId ?: accounts.firstOrNull()?.containerId
@@ -105,7 +109,8 @@ class FinanceDashboardViewModel @Inject constructor(
             goalAdvice = adviceMap,
             isInsightsLoading = insightsLoading,
             apiKey = apiKeyVal,
-            isProcessingStatement = isProcessingStatementVal
+            isProcessingStatement = isProcessingStatementVal,
+            basePrompt = basePromptVal
         )
     }.stateIn(
         scope = viewModelScope,
@@ -126,6 +131,11 @@ class FinanceDashboardViewModel @Inject constructor(
         else
             "Hi! I'm your offline Private AI. Ask me anything about your expenses."
         _chatMessages.value = listOf(ChatMessage(welcomeText, false))
+    }
+
+    fun updateBasePrompt(prompt: String) {
+        aiEngine.saveBasePrompt(prompt)
+        _basePrompt.value = prompt
     }
 
     fun updateSearchQuery(query: String) {
@@ -231,8 +241,15 @@ class FinanceDashboardViewModel @Inject constructor(
                 "- ${it.cleanedVendor}: ${it.type} ${it.amount} [${it.category}]"
             }
             
+            val customSystemPrompt = aiEngine.getBasePrompt()
+            val systemContext = if (customSystemPrompt.trim().isNotEmpty()) {
+                "System Instructions/Base Prompt: $customSystemPrompt\n"
+            } else {
+                "You are a private offline finance advisor. Answer the user's question concisely based on their transactions and the category context if provided.\n"
+            }
+            
             val prompt = """
-                You are a private offline finance advisor. Answer the user's question concisely based on their transactions and the category context if provided.
+                $systemContext
                 Category Context: ${categoryContext ?: "None"}
                 User Question: "$messageText"
 

@@ -41,6 +41,13 @@ class OfflineAIEngine @Inject constructor(
         prefs.edit().putString("gemini_api_key", key).apply()
         aiCoreManager.notifyApiKeyUpdated()
     }
+    fun getBasePrompt(): String {
+        return prefs.getString("gemini_base_prompt", "") ?: ""
+    }
+
+    fun saveBasePrompt(prompt: String) {
+        prefs.edit().putString("gemini_base_prompt", prompt).apply()
+    }
 
     private suspend fun generateCloudContent(prompt: String): String? = withContext(Dispatchers.IO) {
         val apiKey = getApiKey()
@@ -267,7 +274,7 @@ class OfflineAIEngine @Inject constructor(
     suspend fun parseTransactionChunk(textChunk: String): List<ParsedTransaction> = withContext(Dispatchers.Default) {
         val prompt = """
             You are an offline finance statement parser. Convert the raw bank statement lines into a valid JSON array of transaction objects.
-            Each object must contain keys: "amount" (double), "vendor" (string), "type" ("CR" for deposit, "DR" for debit), "category" (one of the Categories below).
+            Each object must contain keys: "amount" (double), "vendor" (string), "type" ("CR" for deposit, "DR" for debit), "category" (one of the Categories below), "date" (string in format DD/MM/YYYY or DD/MM/YY as extracted from the line).
             Do not output any explanation or markdown formatting, just the raw JSON.
 
             Categories: Food & Dining, Shopping, Groceries, Utilities & Bills, Transport & Travel, Entertainment, Income & Salary, Others.
@@ -332,8 +339,9 @@ class OfflineAIEngine @Inject constructor(
                 val vendor = obj.optString("vendor", "Unknown")
                 val type = if (obj.optString("type", "DR").uppercase() == "CR") "CR" else "DR"
                 val category = obj.optString("category", "Others")
+                val date = if (obj.has("date")) obj.optString("date") else null
                 if (amount > 0.0) {
-                    list.add(ParsedTransaction(amount, vendor, type, category))
+                    list.add(ParsedTransaction(amount, vendor, type, category, date))
                 }
             }
         } catch (e: Exception) {
