@@ -253,7 +253,13 @@ class OfflineAIEngine @Inject constructor(
         val amount = match?.groupValues?.get(1)?.replace(",", "")?.toDoubleOrNull() ?: 15.0
 
         val lower = rawNarration.lowercase()
-        val type = if (lower.contains("credit") || lower.contains("deposit") || lower.contains("salary") || lower.contains("refund")) "CR" else "DR"
+        val isCredit = lower.contains("salary") || 
+                       lower.contains("deposit") || 
+                       lower.contains("received") || 
+                       lower.contains("refund") || 
+                       lower.contains("credit") || 
+                       (lower.contains("interest") && !lower.contains("interest application"))
+        val type = if (isCredit) "CR" else "DR"
 
         val category = when {
             lower.contains("starbucks") || lower.contains("restaurant") || lower.contains("food") || lower.contains("dining") || lower.contains("uber eats") || lower.contains("kfc") -> "Food & Dining"
@@ -266,9 +272,22 @@ class OfflineAIEngine @Inject constructor(
             else -> "Others"
         }
 
-        val vendor = rawNarration.split(" ")
-            .filter { it.length > 2 && !it.contains(Regex("[0-9]")) && !it.contains(":") }
-            .take(2).joinToString(" ")
+        val ignoreWords = setOf(
+            "local", "funds", "transfer", "outward", "inward", "spend", "save", "sent",
+            "from", "received", "to", "charge", "charges", "vat", "stamp", "duty",
+            "interest", "application", "overdraft", "loan", "statement", "balance"
+        )
+        val vendorTokens = rawNarration.split(Regex("\\s+"))
+            .map { it.trim() }
+            .filter { token ->
+                token.length > 2 &&
+                !token.contains(Regex("[0-9]")) &&
+                !token.contains(":") &&
+                !token.contains("₦") &&
+                !token.contains("$") &&
+                !ignoreWords.contains(token.lowercase())
+            }
+        val vendor = vendorTokens.take(2).joinToString(" ")
             .ifEmpty { "Unknown Merchant" }
 
         return ParsedTransaction(amount, vendor, type, category)

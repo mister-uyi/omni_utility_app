@@ -73,11 +73,42 @@ class StatementIngestionService : Service() {
         return START_NOT_STICKY
     }
 
+    private fun getDisplayFilename(uri: Uri): String {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = contentResolver.query(uri, null, null, null, null)
+            try {
+                if (cursor != null && cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0) {
+                        result = cursor.getString(index)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                cursor?.close()
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/') ?: -1
+            if (cut != -1) {
+                result = result?.substring(cut + 1)
+            }
+        }
+        return result ?: "statement"
+    }
+
     private suspend fun processFile(uri: Uri, accountId: String) {
-        val filename = uri.path?.substringAfterLast('/') ?: "statement"
+        val filename = getDisplayFilename(uri)
         updateNotification("Extracting text from $filename...", 10)
 
-        val rawLines = if (filename.endsWith(".pdf", ignoreCase = true) || uri.toString().contains(".pdf", ignoreCase = true)) {
+        val isPdf = filename.endsWith(".pdf", ignoreCase = true) ||
+                    uri.toString().contains(".pdf", ignoreCase = true) ||
+                    contentResolver.getType(uri) == "application/pdf"
+
+        val rawLines = if (isPdf) {
             extractPdfText(uri)
         } else {
             extractCsvText(uri)
@@ -88,11 +119,15 @@ class StatementIngestionService : Service() {
             return
         }
 
-        // Clean & Filter noise
+        // Clean & Filter noise: only keep rows that contain a transaction date (e.g. 25/05/26 or 25/05/2026)
+        val dateRegex = """\b\d{2}/\d{2}/\d{2,4}\b""".toRegex()
         val cleanLines = rawLines.filter { line ->
-            line.trim().isNotEmpty() &&
-            !line.contains("Balance Forward", ignoreCase = true) &&
-            !line.contains("Opening Balance", ignoreCase = true)
+            line.trim().isNotEmpty() && dateRegex.containsMatchIn(line)
+        }
+
+        if (cleanLines.isEmpty()) {
+            updateNotification("No transaction rows matched date filter.", 100)
+            return
         }
 
         // Chunk lines to 20 rows
