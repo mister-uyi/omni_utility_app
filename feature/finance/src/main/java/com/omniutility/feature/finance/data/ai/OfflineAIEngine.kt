@@ -12,7 +12,8 @@ data class ParsedTransaction(
     val amount: Double,
     val vendor: String,
     val type: String, // CR or DR
-    val category: String
+    val category: String,
+    val dateStr: String? = null
 )
 
 data class ParsedSearchFilters(
@@ -248,8 +249,17 @@ class OfflineAIEngine @Inject constructor(
     // --- Mock Fallbacks ---
 
     private fun parseTransactionMock(rawNarration: String): ParsedTransaction {
+        val dateRegex = """\b\d{2}/\d{2}/\d{2,4}\b""".toRegex()
+        val timeRegex = """\b\d{2}:\d{2}(?::\d{2})?\b""".toRegex()
+
+        val dateStr = dateRegex.find(rawNarration)?.value
+        
+        // Strip date & time to prevent amount matcher from matching date/time digits!
+        var cleanNarration = dateRegex.replace(rawNarration, "")
+        cleanNarration = timeRegex.replace(cleanNarration, "")
+
         val amountRegex = """(?i)(?:USD|NGN|EUR|₦|\$)\s*([\d,]+(?:\.\d{2})?)""".toRegex()
-        val match = amountRegex.find(rawNarration) ?: """([\d]+(?:\.\d{2})?)""".toRegex().find(rawNarration)
+        val match = amountRegex.find(cleanNarration) ?: """([\d,]+(?:\.\d{2})?)""".toRegex().find(cleanNarration)
         val amount = match?.groupValues?.get(1)?.replace(",", "")?.toDoubleOrNull() ?: 15.0
 
         val lower = rawNarration.lowercase()
@@ -277,7 +287,7 @@ class OfflineAIEngine @Inject constructor(
             "from", "received", "to", "charge", "charges", "vat", "stamp", "duty",
             "interest", "application", "overdraft", "loan", "statement", "balance"
         )
-        val vendorTokens = rawNarration.split(Regex("\\s+"))
+        val vendorTokens = cleanNarration.split(Regex("\\s+"))
             .map { it.trim() }
             .filter { token ->
                 token.length > 2 &&
@@ -290,7 +300,7 @@ class OfflineAIEngine @Inject constructor(
         val vendor = vendorTokens.take(2).joinToString(" ")
             .ifEmpty { "Unknown Merchant" }
 
-        return ParsedTransaction(amount, vendor, type, category)
+        return ParsedTransaction(amount, vendor, type, category, dateStr)
     }
 
     private fun parseSearchQueryMock(userQuery: String): ParsedSearchFilters {

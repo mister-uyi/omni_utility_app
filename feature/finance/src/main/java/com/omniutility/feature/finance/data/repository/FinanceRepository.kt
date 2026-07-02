@@ -187,11 +187,28 @@ class FinanceRepository @Inject constructor(
                 accumulatedBalance - trx.amount
             }
 
+            var trxTimestamp = System.currentTimeMillis()
+            if (trx.dateStr != null) {
+                try {
+                    val sdf = if (trx.dateStr.length == 8) {
+                        java.text.SimpleDateFormat("dd/MM/yy", java.util.Locale.US)
+                    } else {
+                        java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.US)
+                    }
+                    val parsedDate = sdf.parse(trx.dateStr)
+                    if (parsedDate != null) {
+                        trxTimestamp = parsedDate.time
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
             TransactionRecordEntity(
                 trxId = UUID.randomUUID().toString(),
                 containerId = accountId,
-                timestamp = System.currentTimeMillis(),
-                rawNarration = "Statement Import Line",
+                timestamp = trxTimestamp,
+                rawNarration = "Statement Line: " + trx.dateStr.orEmpty(),
                 cleanedVendor = trx.vendor,
                 amount = trx.amount,
                 type = trx.type,

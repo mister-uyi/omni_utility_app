@@ -151,6 +151,7 @@ class StatementIngestionService : Service() {
             val inputStream = contentResolver.openInputStream(uri) ?: return emptyList()
             val document = PDDocument.load(inputStream)
             val stripper = PDFTextStripper()
+            stripper.sortByPosition = true
             val text = stripper.getText(document)
             document.close()
             text.split("\n")
