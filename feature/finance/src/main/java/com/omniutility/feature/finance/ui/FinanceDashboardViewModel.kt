@@ -134,6 +134,15 @@ class FinanceDashboardViewModel @Inject constructor(
         }
     }
 
+    fun clearTransactions() {
+        viewModelScope.launch {
+            uiState.value.activeAccountId?.let { accountId ->
+                repository.clearTransactions(accountId)
+                refreshInsights()
+            }
+        }
+    }
+
     fun addGoal(text: String, category: String?, targetCap: Double, durationDays: Int) {
         viewModelScope.launch {
             val endDate = System.currentTimeMillis() + (durationDays * 24 * 60 * 60 * 1000L)

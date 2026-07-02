@@ -171,6 +171,7 @@ fun FinanceDashboardScreen(
                         onAccountSelect = { viewModel.selectAccount(it) },
                         onUpdateCategory = { trx, cat -> viewModel.updateTransactionCategory(trx, cat) },
                         onDeleteTransaction = { viewModel.deleteTransaction(it) },
+                        onClearTransactions = { viewModel.clearTransactions() },
                         onRetryDiagnostics = { viewModel.retryDiagnostics() }
                     )
                 }
@@ -227,6 +228,7 @@ fun HomeTabContent(
     onAccountSelect: (String) -> Unit,
     onUpdateCategory: (TransactionRecordEntity, String) -> Unit,
     onDeleteTransaction: (TransactionRecordEntity) -> Unit,
+    onClearTransactions: () -> Unit,
     onRetryDiagnostics: () -> Unit
 ) {
     LazyColumn(
@@ -325,9 +327,36 @@ fun HomeTabContent(
 
 
 
-        // Transaction list
+        // Transaction list header with count and clear button
         item {
-            Text("Ledger Transactions", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Ledger Transactions", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = uiState.transactions.size.toString(),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+                if (uiState.transactions.isNotEmpty()) {
+                    TextButton(onClick = onClearTransactions) {
+                        Text("Clear All", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    }
+                }
+            }
         }
 
         if (uiState.transactions.isEmpty()) {
@@ -345,11 +374,15 @@ fun HomeTabContent(
                 }
             }
         } else {
-            items(uiState.transactions) { trx ->
+            items(
+                items = uiState.transactions,
+                key = { it.trxId }
+            ) { trx ->
                 TransactionItemCard(
                     transaction = trx,
                     onUpdateCategory = { onUpdateCategory(trx, it) },
-                    onDelete = { onDeleteTransaction(trx) }
+                    onDelete = { onDeleteTransaction(trx) },
+                    modifier = Modifier.animateItem()
                 )
             }
         }
@@ -948,7 +981,8 @@ fun FinancialDeltaCard(
 fun TransactionItemCard(
     transaction: TransactionRecordEntity,
     onUpdateCategory: (String) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
     val categories = listOf("Food & Dining", "Shopping", "Groceries", "Utilities & Bills", "Transport & Travel", "Entertainment", "Income & Salary", "Others")
@@ -956,7 +990,7 @@ fun TransactionItemCard(
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(

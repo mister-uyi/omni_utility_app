@@ -37,6 +37,9 @@ interface TransactionRecordDao {
 
     @Delete
     suspend fun delete(transaction: TransactionRecordEntity): Int
+
+    @Query("DELETE FROM transaction_records")
+    suspend fun deleteAll(): Int
 }
 
 @Dao

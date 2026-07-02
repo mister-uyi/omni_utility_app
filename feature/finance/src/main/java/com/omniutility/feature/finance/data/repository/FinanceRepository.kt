@@ -158,6 +158,11 @@ class FinanceRepository @Inject constructor(
         transactionRecordDao.delete(transaction)
     }
 
+    suspend fun clearTransactions(accountId: String) {
+        transactionRecordDao.deleteAll()
+        accountContainerDao.updateBalance(accountId, 0.0)
+    }
+
     fun getMemoryLookupsFlow(): Flow<List<MemoryLookupEntity>> = memoryLookupDao.getAllFlow()
 
     suspend fun deleteMemoryLookup(lookup: MemoryLookupEntity) {
