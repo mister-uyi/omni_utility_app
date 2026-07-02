@@ -292,6 +292,10 @@ fun HomeTabContent(
                 ) {
                     items(uiState.accounts) { account ->
                         val isSelected = account.containerId == uiState.activeAccountId
+                        val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                        val secondaryColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                        val balanceColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
+
                         Card(
                             modifier = Modifier
                                 .width(150.dp)
@@ -303,14 +307,14 @@ fun HomeTabContent(
                             )
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text(account.displayName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text(account.bankCode, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(account.displayName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = contentColor)
+                                Text(account.bankCode, fontSize = 11.sp, color = secondaryColor)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     String.format(Locale.getDefault(), "$%.2f", account.currentBalance),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = balanceColor
                                 )
                             }
                         }
