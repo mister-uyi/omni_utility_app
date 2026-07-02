@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -78,6 +79,9 @@ fun FinanceDashboardScreen(
     var showAddAccountDialog by remember { mutableStateOf(false) }
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedCategoryContext by remember { mutableStateOf<String?>(null) }
+
+    val density = LocalDensity.current
+    val isKeyboardOpen = WindowInsets.ime.getBottom(density) > 0
 
     // System Back Gesture / Physical back button handler
     androidx.activity.compose.BackHandler(enabled = true) {
@@ -134,29 +138,30 @@ fun FinanceDashboardScreen(
                 }
             )
         },
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ) {
-                NavigationBarItem(
-                    selected = activeTab == FinanceTab.Home,
-                    onClick = { activeTab = FinanceTab.Home },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("Home") }
-                )
-                NavigationBarItem(
-                    selected = activeTab == FinanceTab.Analytics,
-                    onClick = { activeTab = FinanceTab.Analytics },
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Analytics") },
-                    label = { Text("Analytics") }
-                )
-                NavigationBarItem(
-                    selected = activeTab == FinanceTab.Vault,
-                    onClick = { activeTab = FinanceTab.Vault },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Vault Setup") },
-                    label = { Text("Vault") }
-                )
+            if (!isKeyboardOpen) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    NavigationBarItem(
+                        selected = activeTab == FinanceTab.Home,
+                        onClick = { activeTab = FinanceTab.Home },
+                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                        label = { Text("Home") }
+                    )
+                    NavigationBarItem(
+                        selected = activeTab == FinanceTab.Analytics,
+                        onClick = { activeTab = FinanceTab.Analytics },
+                        icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Analytics") },
+                        label = { Text("Analytics") }
+                    )
+                    NavigationBarItem(
+                        selected = activeTab == FinanceTab.Vault,
+                        onClick = { activeTab = FinanceTab.Vault },
+                        icon = { Icon(Icons.Default.Settings, contentDescription = "Vault Setup") },
+                        label = { Text("Vault") }
+                    )
+                }
             }
         },
         floatingActionButton = {
@@ -496,8 +501,7 @@ fun AnalyticsTabContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .imePadding(),
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Pinned context category label at top if active
@@ -581,6 +585,57 @@ fun AnalyticsTabContent(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
+                        // If empty chat history, show helper suggestion prompt cards as first item in list to prevent squishing
+                        if (chatMessages.size <= 1) {
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Text(
+                                        text = "How can I help you today?",
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 18.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                    )
+                                    
+                                    val suggestions = listOf(
+                                        "Analyze my recent transactions",
+                                        "Categorize my spending",
+                                        "Am I saving enough?"
+                                    )
+                                    
+                                    suggestions.forEach { prompt ->
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { onSendChatMessage(prompt) },
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(prompt, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                                Icon(
+                                                    Icons.AutoMirrored.Filled.Send, 
+                                                    contentDescription = null, 
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         items(chatMessages) { chat ->
                             val isUser = chat.isUser
                             Row(
@@ -650,55 +705,6 @@ fun AnalyticsTabContent(
                                             fontWeight = FontWeight.Bold, 
                                             fontSize = 12.sp,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // If empty chat history, show helper suggestion prompt cards
-                    if (chatMessages.size <= 1) {
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(horizontal = 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Text(
-                                text = "How can I help you today?",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 18.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                            )
-                            
-                            val suggestions = listOf(
-                                "Analyze my recent transactions",
-                                "Categorize my spending",
-                                "Am I saving enough?"
-                            )
-                            
-                            suggestions.forEach { prompt ->
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onSendChatMessage(prompt) },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(prompt, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.Send, 
-                                            contentDescription = null, 
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(12.dp)
                                         )
                                     }
                                 }
