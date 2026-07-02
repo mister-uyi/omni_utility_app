@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -231,6 +232,7 @@ fun FinanceDashboardScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeTabContent(
     uiState: FinanceUiState,
@@ -245,6 +247,8 @@ fun HomeTabContent(
     val currencySymbol = activeAccount?.let { getCurrencySymbol(it.bankCode) } ?: "$"
     var showGrouped by remember { mutableStateOf(false) }
     val expandedMerchants = remember { mutableStateMapOf<String, Boolean>() }
+    val screenWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
+    val cardWidth = screenWidth * 0.82f
 
     LazyColumn(
         modifier = Modifier
@@ -253,25 +257,30 @@ fun HomeTabContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
     ) {
-        // Diagnostics Banner
-        item {
-            DiagnosticsCard(uiState.aiCoreStatus, onRetryDiagnostics)
-        }
+        // Sticky Header containing Diagnostics Banner and Active summary ledger delta card
+        stickyHeader {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                DiagnosticsCard(uiState.aiCoreStatus, onRetryDiagnostics)
+                
+                val income = uiState.transactions.filter { it.type == "CR" }.sumOf { it.amount }
+                val expenses = uiState.transactions.filter { it.type == "DR" }.sumOf { it.amount }
+                val netDelta = income - expenses
+                val currentBalance = activeAccount?.currentBalance ?: 0.0
 
-        // Active summary ledger delta card
-        item {
-            val income = uiState.transactions.filter { it.type == "CR" }.sumOf { it.amount }
-            val expenses = uiState.transactions.filter { it.type == "DR" }.sumOf { it.amount }
-            val netDelta = income - expenses
-            val currentBalance = activeAccount?.currentBalance ?: 0.0
-
-            FinancialDeltaCard(
-                currentBalance = currentBalance,
-                income = income,
-                expenses = expenses,
-                netDelta = netDelta,
-                currencySymbol = currencySymbol
-            )
+                FinancialDeltaCard(
+                    currentBalance = currentBalance,
+                    income = income,
+                    expenses = expenses,
+                    netDelta = netDelta,
+                    currencySymbol = currencySymbol
+                )
+            }
         }
 
         // Wallet Containers
@@ -315,7 +324,7 @@ fun HomeTabContent(
 
                         Card(
                             modifier = Modifier
-                                .width(150.dp)
+                                .width(cardWidth)
                                 .clickable { onAccountSelect(account.containerId) },
                             shape = RoundedCornerShape(16.dp),
                             border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
