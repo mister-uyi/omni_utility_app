@@ -109,7 +109,8 @@ class StatementIngestionService : Service() {
                     contentResolver.getType(uri) == "application/pdf"
 
         val rawLines = if (isPdf) {
-            extractPdfText(uri)
+            val pdfLines = extractPdfText(uri)
+            reconstructTransactions(pdfLines)
         } else {
             extractCsvText(uri)
         }
@@ -203,6 +204,67 @@ class StatementIngestionService : Service() {
     private fun updateNotification(contentText: String, progress: Int) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(notificationId, createNotification(contentText, progress))
+    }
+
+    private fun reconstructTransactions(rawLines: List<String>): List<String> {
+        val dateRegex = """\b\d{2}/\d{2}/\d{2,4}\b""".toRegex()
+        val timeRegex = """\b\d{2}:\d{2}(?::\d{2})?\b""".toRegex()
+        val amountRegex = """(?i)(?:USD|NGN|EUR|\u20A6|\$)\s*[\d,]+(?:\.\d{2})?""".toRegex()
+        
+        val result = mutableListOf<String>()
+        var i = 0
+        val n = rawLines.size
+
+        while (i < n) {
+            val line = rawLines[i].trim()
+            
+            if (dateRegex.matches(line)) {
+                val dateStr = line
+                var timeStr = ""
+                var amountStr = ""
+                val descriptionParts = mutableListOf<String>()
+                var balanceStr = ""
+                
+                i++
+                if (i < n && timeRegex.matches(rawLines[i].trim())) {
+                    timeStr = rawLines[i].trim()
+                    i++
+                }
+                
+                if (i < n && (amountRegex.matches(rawLines[i].trim()) || rawLines[i].trim().startsWith("\u20A6") || rawLines[i].trim().startsWith("$"))) {
+                    amountStr = rawLines[i].trim()
+                    i++
+                }
+                
+                while (i < n) {
+                    val current = rawLines[i].trim()
+                    if (current.isEmpty()) {
+                        i++
+                        continue
+                    }
+                    
+                    if (dateRegex.matches(current)) {
+                        break
+                    }
+                    
+                    if (amountRegex.matches(current) || current.startsWith("\u20A6") || current.startsWith("$") || current.matches("""^[\d,]+\.\d{2}$""".toRegex())) {
+                        balanceStr = current
+                        i++
+                        break
+                    }
+                    
+                    descriptionParts.add(current)
+                    i++
+                }
+                
+                val joinedDescription = descriptionParts.joinToString(" ")
+                val reconstructedLine = "$dateStr $timeStr $amountStr $joinedDescription balance: $balanceStr"
+                result.add(reconstructedLine)
+            } else {
+                i++
+            }
+        }
+        return result
     }
 
     override fun onDestroy() {

@@ -258,8 +258,9 @@ class OfflineAIEngine @Inject constructor(
         var cleanNarration = dateRegex.replace(rawNarration, "")
         cleanNarration = timeRegex.replace(cleanNarration, "")
 
-        val amountRegex = """(?i)(?:USD|NGN|EUR|₦|\$)\s*([\d,]+(?:\.\d{2})?)""".toRegex()
-        val match = amountRegex.find(cleanNarration) ?: """([\d,]+(?:\.\d{2})?)""".toRegex().find(cleanNarration)
+        val amountRegex = """(?i)(?:USD|NGN|EUR|\u20A6|\$)\s*([\d,]+(?:\.\d{2})?)""".toRegex()
+        val decimalRegex = """\b([\d,]+\.\d{2})\b""".toRegex()
+        val match = amountRegex.find(cleanNarration) ?: decimalRegex.find(cleanNarration) ?: """([\d,]+)""".toRegex().find(cleanNarration)
         val amount = match?.groupValues?.get(1)?.replace(",", "")?.toDoubleOrNull() ?: 15.0
 
         val lower = rawNarration.lowercase()
@@ -293,7 +294,7 @@ class OfflineAIEngine @Inject constructor(
                 token.length > 2 &&
                 !token.contains(Regex("[0-9]")) &&
                 !token.contains(":") &&
-                !token.contains("₦") &&
+                !token.contains("\u20A6") &&
                 !token.contains("$") &&
                 !ignoreWords.contains(token.lowercase())
             }
