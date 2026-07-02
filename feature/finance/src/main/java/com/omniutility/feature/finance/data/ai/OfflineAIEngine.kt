@@ -47,7 +47,7 @@ class OfflineAIEngine @Inject constructor(
         if (apiKey.isEmpty()) return@withContext null
         
         try {
-            val url = java.net.URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${java.net.URLEncoder.encode(apiKey, "UTF-8")}")
+            val url = java.net.URL("https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${java.net.URLEncoder.encode(apiKey, "UTF-8")}")
             val conn = url.openConnection() as java.net.HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json")
