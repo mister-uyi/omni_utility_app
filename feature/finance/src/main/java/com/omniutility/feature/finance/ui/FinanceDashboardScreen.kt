@@ -357,23 +357,7 @@ fun HomeTabContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Ledger Transactions", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = uiState.transactions.size.toString(),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
+                Text("Ledger Transactions", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 if (uiState.transactions.isNotEmpty()) {
                     TextButton(onClick = onClearTransactions) {
                         Text("Clear All", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
@@ -385,6 +369,9 @@ fun HomeTabContent(
         // Segmented Control for Detailed vs Grouped
         if (uiState.transactions.isNotEmpty()) {
             item {
+                val totalCount = uiState.transactions.size
+                val groupedCount = uiState.transactions.groupBy { it.cleanedVendor }.size
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -405,7 +392,7 @@ fun HomeTabContent(
                         contentPadding = PaddingValues(vertical = 6.dp),
                         modifier = buttonModifier
                     ) {
-                        Text("Detailed List", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Detailed List ($totalCount)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     
                     Button(
@@ -418,7 +405,7 @@ fun HomeTabContent(
                         contentPadding = PaddingValues(vertical = 6.dp),
                         modifier = buttonModifier
                     ) {
-                        Text("Grouped View", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Grouped View ($groupedCount)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
