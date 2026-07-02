@@ -79,9 +79,8 @@ fun FinanceDashboardScreen(
     var showAddAccountDialog by remember { mutableStateOf(false) }
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedCategoryContext by remember { mutableStateOf<String?>(null) }
-
-
-
+    val density = LocalDensity.current
+    val isKeyboardOpen = WindowInsets.ime.getBottom(density) > 0
     // System Back Gesture / Physical back button handler
     androidx.activity.compose.BackHandler(enabled = true) {
         if (activeTab != FinanceTab.Home) {
@@ -138,27 +137,29 @@ fun FinanceDashboardScreen(
             )
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ) {
-                NavigationBarItem(
-                    selected = activeTab == FinanceTab.Home,
-                    onClick = { activeTab = FinanceTab.Home },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("Home") }
-                )
-                NavigationBarItem(
-                    selected = activeTab == FinanceTab.Analytics,
-                    onClick = { activeTab = FinanceTab.Analytics },
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Analytics") },
-                    label = { Text("Analytics") }
-                )
-                NavigationBarItem(
-                    selected = activeTab == FinanceTab.Vault,
-                    onClick = { activeTab = FinanceTab.Vault },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Vault Setup") },
-                    label = { Text("Vault") }
-                )
+            if (!isKeyboardOpen) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    NavigationBarItem(
+                        selected = activeTab == FinanceTab.Home,
+                        onClick = { activeTab = FinanceTab.Home },
+                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                        label = { Text("Home") }
+                    )
+                    NavigationBarItem(
+                        selected = activeTab == FinanceTab.Analytics,
+                        onClick = { activeTab = FinanceTab.Analytics },
+                        icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Analytics") },
+                        label = { Text("Analytics") }
+                    )
+                    NavigationBarItem(
+                        selected = activeTab == FinanceTab.Vault,
+                        onClick = { activeTab = FinanceTab.Vault },
+                        icon = { Icon(Icons.Default.Settings, contentDescription = "Vault Setup") },
+                        label = { Text("Vault") }
+                    )
+                }
             }
         },
         floatingActionButton = {
@@ -175,21 +176,10 @@ fun FinanceDashboardScreen(
         },
         modifier = modifier.fillMaxSize()
     ) { padding ->
-        val density = LocalDensity.current
-        val keyboardHeightDp = with(density) { WindowInsets.ime.getBottom(density).toDp() }
-        val bottomBarPadding = padding.calculateBottomPadding()
-        val dynamicBottomPadding = if (activeTab == FinanceTab.Analytics || activeTab == FinanceTab.Vault) {
-            if (bottomBarPadding > keyboardHeightDp) bottomBarPadding - keyboardHeightDp else 0.dp
-        } else {
-            bottomBarPadding
-        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    top = padding.calculateTopPadding(),
-                    bottom = dynamicBottomPadding
-                )
+                .padding(padding)
         ) {
             when (activeTab) {
                 FinanceTab.Home -> {
@@ -509,8 +499,7 @@ fun AnalyticsTabContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .imePadding(),
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Pinned context category label at top if active
@@ -787,8 +776,7 @@ fun VaultSetupTabContent(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .imePadding(),
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
