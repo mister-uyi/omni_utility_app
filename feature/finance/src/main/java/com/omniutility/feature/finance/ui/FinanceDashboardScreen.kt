@@ -79,6 +79,15 @@ fun FinanceDashboardScreen(
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedCategoryContext by remember { mutableStateOf<String?>(null) }
 
+    // System Back Gesture / Physical back button handler
+    androidx.activity.compose.BackHandler(enabled = true) {
+        if (activeTab != FinanceTab.Home) {
+            activeTab = FinanceTab.Home
+        } else {
+            onBack()
+        }
+    }
+
     // Launcher for PDF/CSV files
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -104,7 +113,15 @@ fun FinanceDashboardScreen(
                     Text("Private AI Finance", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = {
+                            if (activeTab != FinanceTab.Home) {
+                                activeTab = FinanceTab.Home
+                            } else {
+                                onBack()
+                            }
+                        }
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -117,6 +134,7 @@ fun FinanceDashboardScreen(
                 }
             )
         },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -478,7 +496,8 @@ fun AnalyticsTabContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .imePadding(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Pinned context category label at top if active
