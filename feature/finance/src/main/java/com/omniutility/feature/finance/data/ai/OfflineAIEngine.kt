@@ -46,52 +46,95 @@ class OfflineAIEngine @Inject constructor(
         val apiKey = getApiKey()
         if (apiKey.isEmpty()) return@withContext null
         
-        try {
-            val url = java.net.URL("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${java.net.URLEncoder.encode(apiKey, "UTF-8")}")
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.doOutput = true
-            
-            val escapedPrompt = org.json.JSONObject.quote(prompt)
-            val jsonBody = """
-                {
-                  "contents": [
+        var attempt = 0
+        val maxAttempts = 3
+        while (attempt < maxAttempts) {
+            try {
+                val url = java.net.URL("https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-lite:generateContent?key=${java.net.URLEncoder.encode(apiKey, "UTF-8")}")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+                
+                val escapedPrompt = org.json.JSONObject.quote(prompt)
+                val jsonBody = """
                     {
-                      "parts": [
+                      "contents": [
                         {
-                          "text": ${escapedPrompt}
+                          "parts": [
+                            {
+                              "text": ${escapedPrompt}
+                            }
+                          ]
                         }
                       ]
                     }
-                  ]
+                """.trimIndent()
+                
+                conn.outputStream.use { os ->
+                    os.write(jsonBody.toByteArray(Charsets.UTF_8))
                 }
-            """.trimIndent()
-            
-            conn.outputStream.use { os ->
-                os.write(jsonBody.toByteArray(Charsets.UTF_8))
-            }
-            
-            if (conn.responseCode == 200) {
-                val responseText = conn.inputStream.bufferedReader().use { it.readText() }
-                val jsonResponse = org.json.JSONObject(responseText)
-                val candidates = jsonResponse.optJSONArray("candidates")
-                if (candidates != null && candidates.length() > 0) {
-                    val firstCandidate = candidates.getJSONObject(0)
-                    val contentObj = firstCandidate.optJSONObject("content")
-                    if (contentObj != null) {
-                        val parts = contentObj.optJSONArray("parts")
-                        if (parts != null && parts.length() > 0) {
-                            return@withContext parts.getJSONObject(0).optString("text")
+                
+                val code = conn.responseCode
+                if (code == 200) {
+                    val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                    val jsonResponse = org.json.JSONObject(responseText)
+                    val candidates = jsonResponse.optJSONArray("candidates")
+                    if (candidates != null && candidates.length() > 0) {
+                        val firstCandidate = candidates.getJSONObject(0)
+                        val contentObj = firstCandidate.optJSONObject("content")
+                        if (contentObj != null) {
+                            val parts = contentObj.optJSONArray("parts")
+                            if (parts != null && parts.length() > 0) {
+                                return@withContext parts.getJSONObject(0).optString("text")
+                            }
                         }
                     }
+                    return@withContext null
+                } else if (code == 429) {
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
+                    android.util.Log.w("OfflineAIEngine", "Rate limited (429). Attempt ${attempt + 1} of $maxAttempts. Body: $err")
+                    
+                    var sleepMs = 5000L
+                    try {
+                        if (err != null) {
+                            val errJson = org.json.JSONObject(err)
+                            val errorObj = errJson.optJSONObject("error")
+                            if (errorObj != null) {
+                                val details = errorObj.optJSONArray("details")
+                                if (details != null) {
+                                    for (i in 0 until details.length()) {
+                                        val detail = details.getJSONObject(i)
+                                        val retryInfo = detail.optJSONObject("retryInfo")
+                                        if (retryInfo != null) {
+                                            val delayStr = retryInfo.optString("retryDelay") // e.g. "24s" or "24.6s"
+                                            if (delayStr.endsWith("s")) {
+                                                val secsStr = delayStr.dropLast(1)
+                                                val secs = secsStr.toDoubleOrNull() ?: 5.0
+                                                sleepMs = (secs * 1000).toLong()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    
+                    android.util.Log.i("OfflineAIEngine", "Sleeping for ${sleepMs}ms before retry...")
+                    kotlinx.coroutines.delay(sleepMs)
+                    attempt++
+                } else {
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
+                    android.util.Log.e("OfflineAIEngine", "Cloud API Error code: $code, body: $err")
+                    return@withContext null
                 }
-            } else {
-                val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
-                android.util.Log.e("OfflineAIEngine", "Cloud API Error code: ${conn.responseCode}, body: $err")
+            } catch (e: Exception) {
+                android.util.Log.e("OfflineAIEngine", "Cloud API invocation failed on attempt ${attempt + 1}", e)
+                kotlinx.coroutines.delay(2000)
+                attempt++
             }
-        } catch (e: Exception) {
-            android.util.Log.e("OfflineAIEngine", "Cloud API invocation failed", e)
         }
         null
     }

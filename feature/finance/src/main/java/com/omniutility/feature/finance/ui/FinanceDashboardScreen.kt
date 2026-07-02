@@ -1076,7 +1076,7 @@ fun DiagnosticsCard(
                 Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 val description = when (status) {
                     is AICoreStatus.Ready -> "Gemini Nano hardware key binding successfully established."
-                    is AICoreStatus.CloudActive -> "Gemini 1.5 Flash API active (Key preview: ${status.keyPreview})."
+                    is AICoreStatus.CloudActive -> "Gemini 3.1 Flash Lite API active (Key preview: ${status.keyPreview})."
                     is AICoreStatus.Checking -> "Scanning for local AICore engine..."
                     is AICoreStatus.Downloading -> "Syncing localized model packages: ${status.progressPercent}% downloaded."
                     is AICoreStatus.Fallback -> status.message
