@@ -72,6 +72,7 @@ fun FinanceDashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val chatMessages by viewModel.chatMessages.collectAsState()
+    val isChatLoading by viewModel.isChatLoading.collectAsState()
     val memoryRegistry by viewModel.memoryRegistry.collectAsState()
     val context = LocalContext.current
 
@@ -197,6 +198,7 @@ fun FinanceDashboardScreen(
                     AnalyticsTabContent(
                         uiState = uiState,
                         chatMessages = chatMessages,
+                        isChatLoading = isChatLoading,
                         selectedCategoryContext = selectedCategoryContext,
                         onCategorySelect = { selectedCategoryContext = if (selectedCategoryContext == it) null else it },
                         onClearCategoryContext = { selectedCategoryContext = null },
@@ -484,6 +486,7 @@ fun HomeTabContent(
 fun AnalyticsTabContent(
     uiState: FinanceUiState,
     chatMessages: List<ChatMessage>,
+    isChatLoading: Boolean,
     selectedCategoryContext: String?,
     onCategorySelect: (String) -> Unit,
     onClearCategoryContext: () -> Unit,
@@ -710,6 +713,65 @@ fun AnalyticsTabContent(
                                 }
                             }
                         }
+
+                        if (isChatLoading) {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Start,
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (uiState.apiKey.isNotEmpty()) Color(0xFF1565C0).copy(alpha = 0.15f) else Color(0xFF2E7D32).copy(alpha = 0.15f)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle, 
+                                            contentDescription = null, 
+                                            tint = if (uiState.apiKey.isNotEmpty()) Color(0xFF1565C0) else Color(0xFF2E7D32),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Card(
+                                        shape = RoundedCornerShape(
+                                            topStart = 16.dp,
+                                            topEnd = 16.dp,
+                                            bottomStart = 4.dp,
+                                            bottomEnd = 16.dp
+                                        ),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                                        ),
+                                        modifier = Modifier.widthIn(max = 280.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(14.dp),
+                                                strokeWidth = 1.5.dp,
+                                                color = if (uiState.apiKey.isNotEmpty()) Color(0xFF1565C0) else Color(0xFF2E7D32)
+                                            )
+                                            Text(
+                                                text = "Thinking...",
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -727,7 +789,7 @@ fun AnalyticsTabContent(
                         onValueChange = { textInput = it },
                         placeholder = { 
                             Text(
-                                if (uiState.apiKey.isNotEmpty()) "Ask Gemini..." else "Ask something offline...", 
+                                if (isChatLoading) "Gemini is thinking..." else if (uiState.apiKey.isNotEmpty()) "Ask Gemini..." else "Ask something offline...", 
                                 fontSize = 13.sp
                             ) 
                         },
@@ -739,16 +801,21 @@ fun AnalyticsTabContent(
                             focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                             unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                         ),
-                        singleLine = true
+                        singleLine = true,
+                        enabled = !isChatLoading
                     )
                     IconButton(
+                        enabled = !isChatLoading && textInput.trim().isNotEmpty(),
                         onClick = {
                             if (textInput.trim().isNotEmpty()) {
                                 onSendChatMessage(textInput)
                                 textInput = ""
                             }
                         },
-                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        ),
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
