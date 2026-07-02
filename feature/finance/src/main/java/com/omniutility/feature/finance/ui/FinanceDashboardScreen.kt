@@ -80,8 +80,7 @@ fun FinanceDashboardScreen(
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedCategoryContext by remember { mutableStateOf<String?>(null) }
 
-    val density = LocalDensity.current
-    val isKeyboardOpen = WindowInsets.ime.getBottom(density) > 0
+
 
     // System Back Gesture / Physical back button handler
     androidx.activity.compose.BackHandler(enabled = true) {
@@ -139,29 +138,27 @@ fun FinanceDashboardScreen(
             )
         },
         bottomBar = {
-            if (!isKeyboardOpen) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ) {
-                    NavigationBarItem(
-                        selected = activeTab == FinanceTab.Home,
-                        onClick = { activeTab = FinanceTab.Home },
-                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                        label = { Text("Home") }
-                    )
-                    NavigationBarItem(
-                        selected = activeTab == FinanceTab.Analytics,
-                        onClick = { activeTab = FinanceTab.Analytics },
-                        icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Analytics") },
-                        label = { Text("Analytics") }
-                    )
-                    NavigationBarItem(
-                        selected = activeTab == FinanceTab.Vault,
-                        onClick = { activeTab = FinanceTab.Vault },
-                        icon = { Icon(Icons.Default.Settings, contentDescription = "Vault Setup") },
-                        label = { Text("Vault") }
-                    )
-                }
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ) {
+                NavigationBarItem(
+                    selected = activeTab == FinanceTab.Home,
+                    onClick = { activeTab = FinanceTab.Home },
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                    label = { Text("Home") }
+                )
+                NavigationBarItem(
+                    selected = activeTab == FinanceTab.Analytics,
+                    onClick = { activeTab = FinanceTab.Analytics },
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Analytics") },
+                    label = { Text("Analytics") }
+                )
+                NavigationBarItem(
+                    selected = activeTab == FinanceTab.Vault,
+                    onClick = { activeTab = FinanceTab.Vault },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Vault Setup") },
+                    label = { Text("Vault") }
+                )
             }
         },
         floatingActionButton = {
@@ -779,7 +776,8 @@ fun VaultSetupTabContent(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .imePadding(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
