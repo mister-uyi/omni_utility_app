@@ -104,17 +104,22 @@ fun FinanceDashboardScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Private AI Finance", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                         // Airplane mode isolation shield status pill
+                        val isCloud = uiState.apiKey.isNotEmpty()
+                        val badgeColor = if (isCloud) Color(0xFF1565C0) else Color(0xFF2E7D32)
+                        val badgeText = if (isCloud) "Cloud Hybrid" else "Offline Shield"
+                        val badgeIcon = if (isCloud) Icons.Default.CheckCircle else Icons.Default.Lock
+
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .background(Color(0xFF2E7D32).copy(alpha = 0.15f))
-                                .border(1.dp, Color(0xFF2E7D32), CircleShape)
+                                .background(badgeColor.copy(alpha = 0.15f))
+                                .border(1.dp, badgeColor, CircleShape)
                                 .padding(horizontal = 8.dp, vertical = 2.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF2E7D32), modifier = Modifier.size(10.dp))
-                                Text("Offline Shield", color = Color(0xFF2E7D32), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Icon(badgeIcon, contentDescription = null, tint = badgeColor, modifier = Modifier.size(10.dp))
+                                Text(badgeText, color = badgeColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -617,7 +622,12 @@ fun AnalyticsTabContent(
                     OutlinedTextField(
                         value = textInput,
                         onValueChange = { textInput = it },
-                        placeholder = { Text("Ask something offline...", fontSize = 12.sp) },
+                        placeholder = { 
+                            Text(
+                                if (uiState.apiKey.isNotEmpty()) "Ask Gemini..." else "Ask something offline...", 
+                                fontSize = 12.sp
+                            ) 
+                        },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(24.dp),
                         colors = TextFieldDefaults.colors(
