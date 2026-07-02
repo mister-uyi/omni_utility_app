@@ -54,20 +54,27 @@ class AICoreManager @Inject constructor(
             return
         }
 
+        android.util.Log.i("AICoreManager", "No Cloud API key found. Starting local AI Core preparation diagnostics...")
+
         // 1. Basic package check to see if AICore is present on the device
+        android.util.Log.i("AICoreManager", "Checking if package com.google.android.aicore is installed...")
         val isPackageInstalled = try {
             context.packageManager.getPackageInfo("com.google.android.aicore", 0)
+            android.util.Log.i("AICoreManager", "Package com.google.android.aicore is INSTALLED.")
             true
         } catch (e: Exception) {
+            android.util.Log.w("AICoreManager", "Package com.google.android.aicore is NOT installed on this device.")
             false
         }
 
         if (!isPackageInstalled) {
+            android.util.Log.w("AICoreManager", "Device does not support local AICore (Package missing). Status set to Unsupported.")
             _status.value = AICoreStatus.Unsupported
             return
         }
 
         try {
+            android.util.Log.i("AICoreManager", "Initializing GenerativeModel config with local context...")
             val generationConfig = generationConfig {
                 context = this@AICoreManager.context
                 temperature = 0.0f // Keep it deterministic for transaction parsing
@@ -75,22 +82,27 @@ class AICoreManager @Inject constructor(
 
             val downloadCallback = object : DownloadCallback {
                 override fun onDownloadStarted(bytesToDownload: Long) {
+                    android.util.Log.i("AICoreManager", "Download Callback: onDownloadStarted. bytesToDownload = $bytesToDownload")
                     _status.value = AICoreStatus.Downloading(0)
                 }
 
                 override fun onDownloadProgress(totalBytesDownloaded: Long) {
+                    android.util.Log.d("AICoreManager", "Download Callback: onDownloadProgress. totalBytesDownloaded = $totalBytesDownloaded")
                     _status.value = AICoreStatus.Downloading(50)
                 }
 
                 override fun onDownloadCompleted() {
+                    android.util.Log.i("AICoreManager", "Download Callback: onDownloadCompleted! Model is successfully downloaded locally.")
                     _status.value = AICoreStatus.Ready
                 }
 
                 override fun onDownloadFailed(failureStatus: String, e: GenerativeAIException) {
+                    android.util.Log.e("AICoreManager", "Download Callback: onDownloadFailed. status = $failureStatus", e)
                     _status.value = AICoreStatus.Error("Model update failed: $failureStatus")
                 }
             }
 
+            android.util.Log.i("AICoreManager", "Creating GenerativeModel instance with DownloadCallback listener...")
             val model = GenerativeModel(
                 generationConfig = generationConfig,
                 downloadConfig = DownloadConfig(downloadCallback)
@@ -98,14 +110,17 @@ class AICoreManager @Inject constructor(
             generativeModel = model
 
             // Launch preparation asynchronously on Main thread
+            android.util.Log.i("AICoreManager", "Launching prepareInferenceEngine() coroutine...")
             CoroutineScope(Dispatchers.Main).launch {
                 try {
                     model.prepareInferenceEngine()
+                    android.util.Log.i("AICoreManager", "prepareInferenceEngine() returned successfully. Local model is READY.")
                     _status.value = AICoreStatus.Ready
                 } catch (e: Exception) {
-                    android.util.Log.e("AICoreManager", "AICore engine preparation failed", e)
+                    android.util.Log.e("AICoreManager", "prepareInferenceEngine() failed with exception", e)
                     val msg = e.message ?: "AICore binding failed"
                     if (msg.contains("NOT_AVAILABLE", ignoreCase = true) || msg.contains("feature not found", ignoreCase = true)) {
+                        android.util.Log.w("AICoreManager", "Inference engine reported NOT_AVAILABLE / download pending. Transitioning to Fallback.")
                         _status.value = AICoreStatus.Fallback("On-device model download pending. Safe offline fallback engine is active.")
                     } else {
                         _status.value = AICoreStatus.Error(msg)
@@ -114,6 +129,7 @@ class AICoreManager @Inject constructor(
             }
 
         } catch (e: Exception) {
+            android.util.Log.e("AICoreManager", "Failed to build GenerativeModel config", e)
             _status.value = AICoreStatus.Error(e.message ?: "Failed to initialize GenerativeModel")
         }
     }
