@@ -27,26 +27,32 @@ sealed interface AICoreStatus {
 }
 
 @Singleton
-class AICoreManager @Inject constructor(
-    @ApplicationContext private val context: Context
+open class AICoreManager(
+    private val context: Context?,
+    private val shouldInit: Boolean
 ) {
+    @Inject constructor(@ApplicationContext context: Context) : this(context, true)
+
     private val _status = MutableStateFlow<AICoreStatus>(AICoreStatus.Checking)
-    val status: StateFlow<AICoreStatus> = _status
+    open val status: StateFlow<AICoreStatus> = _status
 
     private var generativeModel: GenerativeModel? = null
 
     init {
+        if (shouldInit) {
+            checkSupportAndPrepare()
+        }
+    }
+
+    open fun notifyApiKeyUpdated() {
         checkSupportAndPrepare()
     }
 
-    fun notifyApiKeyUpdated() {
-        checkSupportAndPrepare()
-    }
-
-    fun checkSupportAndPrepare() {
+    open fun checkSupportAndPrepare() {
+        val ctx = context ?: return
         _status.value = AICoreStatus.Checking
 
-        val prefs = context.getSharedPreferences("finance_prefs", Context.MODE_PRIVATE)
+        val prefs = ctx.getSharedPreferences("finance_prefs", Context.MODE_PRIVATE)
         val apiKey = prefs.getString("gemini_api_key", "") ?: ""
         if (apiKey.isNotEmpty()) {
             val preview = if (apiKey.length > 8) apiKey.take(4) + "..." + apiKey.takeLast(4) else "Active"
@@ -59,7 +65,7 @@ class AICoreManager @Inject constructor(
         // 1. Basic package check to see if AICore is present on the device
         android.util.Log.i("AICoreManager", "Checking if package com.google.android.aicore is installed...")
         val isPackageInstalled = try {
-            context.packageManager.getPackageInfo("com.google.android.aicore", 0)
+            ctx.packageManager.getPackageInfo("com.google.android.aicore", 0)
             android.util.Log.i("AICoreManager", "Package com.google.android.aicore is INSTALLED.")
             true
         } catch (e: Exception) {
@@ -76,7 +82,7 @@ class AICoreManager @Inject constructor(
         try {
             android.util.Log.i("AICoreManager", "Initializing GenerativeModel config with local context...")
             val generationConfig = generationConfig {
-                context = this@AICoreManager.context
+                context = ctx
                 temperature = 0.0f // Keep it deterministic for transaction parsing
             }
 

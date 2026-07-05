@@ -136,7 +136,15 @@ fun ShareTargetScreen(
 ) {
     var title by remember { mutableStateOf(initialTitle) }
     var url by remember { mutableStateOf(initialUrl) }
-    var selectedType by remember { mutableStateOf(initialType) }
+    
+    val selectedType = remember(url) {
+        val trimmedUrl = url.trim()
+        when {
+            trimmedUrl.isBlank() -> TaskType.TEXT
+            trimmedUrl.contains("youtube.com", ignoreCase = true) || trimmedUrl.contains("youtu.be", ignoreCase = true) -> TaskType.YOUTUBE_LINK
+            else -> TaskType.WEB_LINK
+        }
+    }
 
     val accentColor = Color(0xFFF5A623)
     val surfaceColor = Color(0xFF1A1A1A)
@@ -171,7 +179,7 @@ fun ShareTargetScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Add Shared Task",
+                    text = "Add to My Tasks",
                     color = accentColor,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
@@ -207,46 +215,6 @@ fun ShareTargetScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp)
                     )
-                }
-
-                // Task Type selection
-                Column {
-                    Text(
-                        text = "Task Type",
-                        color = Color(0xFF8A8A8A),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        TaskType.entries.forEach { type ->
-                            val isSelected = selectedType == type
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) accentColor.copy(alpha = 0.2f) else Color.Transparent)
-                                    .border(1.dp, if (isSelected) accentColor else borderColor, RoundedCornerShape(8.dp))
-                                    .clickable { selectedType = type }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = when (type) {
-                                        TaskType.TEXT -> "Text"
-                                        TaskType.WEB_LINK -> "Link"
-                                        TaskType.YOUTUBE_LINK -> "YouTube"
-                                    },
-                                    color = if (isSelected) accentColor else Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
