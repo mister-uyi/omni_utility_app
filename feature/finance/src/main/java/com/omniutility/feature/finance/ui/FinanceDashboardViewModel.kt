@@ -223,6 +223,9 @@ class FinanceDashboardViewModel @Inject constructor(
     )
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages
 
+    private val _isChatLoading = MutableStateFlow(false)
+    val isChatLoading: StateFlow<Boolean> = _isChatLoading
+
     val memoryRegistry: StateFlow<List<MemoryLookupEntity>> = repository.getMemoryLookupsFlow()
         .stateIn(
             scope = viewModelScope,
@@ -240,6 +243,7 @@ class FinanceDashboardViewModel @Inject constructor(
         val userMsg = ChatMessage(messageText, true)
         _chatMessages.value = _chatMessages.value + userMsg
 
+        _isChatLoading.value = true
         viewModelScope.launch {
             val transactions = uiState.value.transactions
             val totalIncome = transactions.filter { it.type == "CR" }.sumOf { it.amount }
@@ -289,6 +293,7 @@ class FinanceDashboardViewModel @Inject constructor(
             }
 
             _chatMessages.value = _chatMessages.value + ChatMessage(response, false)
+            _isChatLoading.value = false
         }
     }
 }

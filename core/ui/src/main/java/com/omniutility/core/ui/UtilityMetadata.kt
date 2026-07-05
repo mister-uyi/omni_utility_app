@@ -7,5 +7,7 @@ data class UtilityMetadata(
     val title: String,
     val description: String,
     val icon: ImageVector,
-    val route: String
+    val route: String,
+    val isLocked: Boolean = false,
+    val lockMessage: String? = null
 )

@@ -6,3 +6,4 @@ import kotlinx.serialization.Serializable
 @Serializable data object Main : NavKey
 @Serializable data object SoftPower : NavKey
 @Serializable data object Finance : NavKey
+@Serializable data object OwnYourTime : NavKey

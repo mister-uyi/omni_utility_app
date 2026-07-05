@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
 import com.omniutility.SoftPower
 import com.omniutility.Finance
+import com.omniutility.OwnYourTime
 import com.omniutility.core.ui.UtilityMetadata
 import com.omniutility.core.ui.theme.OmniUtilityTheme
 
@@ -85,6 +86,8 @@ fun MainScreen(
                                 onItemClick(SoftPower)
                             } else if (metadata.id == "finance") {
                                 onItemClick(Finance)
+                            } else if (metadata.id == "own_your_time") {
+                                onItemClick(OwnYourTime)
                             }
                         }
                     }

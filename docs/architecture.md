@@ -87,3 +87,11 @@ To add a brand-new feature to this multi-functional app:
   * **AI Chat Advisor:** Contextual advisor utilizing Android AICore (Gemini Nano) for on-device inference, falling back to Gemini API (Studio Key) if Nano is offline.
   * **Keyboard Integration:** Resizes automatically with `Modifier.imePadding()` while the bottom navigation tab auto-hides beyond `100.dp` to prevent double-stacking.
   * **Ground-Truth Injections:** Injects programmatically calculated math metrics directly into chat prompts to prevent LLM miscounting.
+
+### Feature C: Own Your Time (`:feature:own-your-time`)
+* **Purpose:** A focus session manager and app blocker that intercepts unauthorized app usage to maintain user focus.
+* **Key Components:**
+  * **App Interception & Blocking:** Uses a `ForegroundService` observing `UsageStatsManager` to detect when prohibited apps are opened during active sessions.
+  * **Bypassing Background Restrictions:** Explicitly relies on the `SYSTEM_ALERT_WINDOW` (Display over other apps) permission to allow the background service to bounce the user back to the focus screen natively, overriding Android 10+ background activity start restrictions.
+  * **Task Management:** Allows users to build lists of reusable "Task Templates" (text, deep links) tracked iteratively per session.
+  * **Activity Backstack Manipulation:** Lock screens explicitly use `Intent.FLAG_ACTIVITY_CLEAR_TASK` alongside Compose `BackHandler` blocks to securely trap the user and destroy the blocked app's history stack.

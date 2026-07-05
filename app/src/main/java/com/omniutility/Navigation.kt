@@ -13,6 +13,7 @@ import com.omniutility.feature.softpower.SoftPowerSettingsScreen
 import com.omniutility.ui.main.MainScreen
 import com.omniutility.feature.finance.ui.FinanceDashboardScreen
 import com.omniutility.feature.finance.ui.FinanceDashboardViewModel
+import com.omniutility.feature.ownyourtime.ui.OwnYourTimeScreen
 
 @Composable
 fun MainNavigation() {
@@ -43,6 +44,9 @@ fun MainNavigation() {
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() }
           )
+        }
+        entry<OwnYourTime> {
+          OwnYourTimeScreen(onBack = { backStack.removeLastOrNull() })
         }
       },
   )
