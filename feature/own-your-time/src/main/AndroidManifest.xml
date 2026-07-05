@@ -20,6 +20,17 @@
                 android:value="session_timer" />
         </service>
 
+        <service
+            android:name=".service.QuickSettingsTileService"
+            android:label="Start Session"
+            android:icon="@android:drawable/ic_media_play"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <activity
             android:name=".activity.ShareTargetActivity"
             android:label="Add to My Tasks"
