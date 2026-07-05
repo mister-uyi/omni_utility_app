@@ -123,10 +123,15 @@ class SessionSetupViewModel @Inject constructor(
             currentState.selectedTaskIds.forEach { taskId ->
                 val task = repository.getTask(taskId)
                 if (task != null) {
+                    val snapshotJson = org.json.JSONObject().apply {
+                        put("title", task.title)
+                        put("type", task.type.name)
+                        put("url", task.url ?: "")
+                    }.toString()
                     val sessionTask = SessionTaskEntity(
                         sessionId = session.id,
                         taskId = taskId,
-                        taskSnapshot = """{"title":"${task.title}","type":"${task.type}"}"""
+                        taskSnapshot = snapshotJson
                     )
                     repository.saveSessionTask(sessionTask)
                 }

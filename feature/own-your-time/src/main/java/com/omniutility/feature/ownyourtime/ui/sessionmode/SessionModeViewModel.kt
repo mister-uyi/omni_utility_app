@@ -96,16 +96,26 @@ class SessionModeViewModel @Inject constructor(
             
             // Load tasks
             repository.observeSessionTasks(sessionId).onEach { tasks ->
-                val uiTasks = tasks.map { sessionTask ->
+                val uiTasks = mutableListOf<SessionTaskUI>()
+                for (sessionTask in tasks) {
                     val json = JSONObject(sessionTask.taskSnapshot)
                     val typeStr = json.optString("type", TaskType.TEXT.name)
                     val type = try { TaskType.valueOf(typeStr) } catch (e: Exception) { TaskType.TEXT }
-                    SessionTaskUI(
-                        id = sessionTask.taskId,
-                        title = json.optString("title", "Unknown Task"),
-                        type = type,
-                        completed = sessionTask.completed,
-                        url = json.optString("url", "").takeIf { it != "null" && it.isNotBlank() }
+                    
+                    var url = json.optString("url", "").takeIf { it != "null" && it.isNotBlank() }
+                    if (url == null) {
+                        val dbTask = repository.getTask(sessionTask.taskId)
+                        url = dbTask?.url
+                    }
+                    
+                    uiTasks.add(
+                        SessionTaskUI(
+                            id = sessionTask.taskId,
+                            title = json.optString("title", "Unknown Task"),
+                            type = type,
+                            completed = sessionTask.completed,
+                            url = url
+                        )
                     )
                 }
                 _state.update { it.copy(tasks = uiTasks) }

@@ -190,11 +190,14 @@ fun SessionModeScreen(
                             if (!task.url.isNullOrBlank()) {
                                 Text(
                                     text = task.url,
-                                    color = Color(0xFF8A8A8A),
+                                    color = Color(0xFFF5A623),
                                     fontSize = 12.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.clickable { activeUrl = task.url }
+                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                                    modifier = Modifier
+                                        .clickable { activeUrl = task.url }
+                                        .padding(vertical = 2.dp)
                                 )
                             }
                         }
