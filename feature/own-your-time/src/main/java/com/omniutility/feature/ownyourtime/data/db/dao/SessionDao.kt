@@ -37,8 +37,14 @@ interface SessionDao {
     @Query("SELECT COUNT(*) FROM sessions WHERE startedAt >= :fromMs AND startedAt < :toMs")
     suspend fun countSessionsInRange(fromMs: Long, toMs: Long): Int
 
+    @Query("SELECT COUNT(*) FROM sessions WHERE startedAt >= :fromMs AND startedAt < :toMs")
+    fun observeSessionCountInRange(fromMs: Long, toMs: Long): Flow<Int>
+
     @Query("SELECT SUM(actualDurationMs) FROM sessions WHERE startedAt >= :fromMs AND startedAt < :toMs")
     suspend fun sumDurationInRange(fromMs: Long, toMs: Long): Long?
+
+    @Query("SELECT SUM(actualDurationMs) FROM sessions WHERE startedAt >= :fromMs AND startedAt < :toMs")
+    fun observeSumDurationInRange(fromMs: Long, toMs: Long): Flow<Long?>
 
     @Query("""
         SELECT COUNT(*) FROM session_tasks st
@@ -46,6 +52,13 @@ interface SessionDao {
         WHERE st.completed = 1 AND s.startedAt >= :fromMs AND s.startedAt < :toMs
     """)
     suspend fun countCompletedTasksInRange(fromMs: Long, toMs: Long): Int
+
+    @Query("""
+        SELECT COUNT(*) FROM session_tasks st
+        INNER JOIN sessions s ON st.sessionId = s.id
+        WHERE st.completed = 1 AND s.startedAt >= :fromMs AND s.startedAt < :toMs
+    """)
+    fun observeCompletedTasksInRange(fromMs: Long, toMs: Long): Flow<Int>
 
     @Query("SELECT DISTINCT taskId FROM session_tasks WHERE completed = 1")
     fun observeCompletedTaskIds(): Flow<List<String>>

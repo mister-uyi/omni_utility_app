@@ -3,6 +3,7 @@ package com.omniutility.feature.ownyourtime.data.repository
 import com.omniutility.feature.ownyourtime.data.db.dao.*
 import com.omniutility.feature.ownyourtime.data.db.entity.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,6 +33,9 @@ class OwnYourTimeRepository @Inject constructor(
     suspend fun getSessionCount(fromMs: Long, toMs: Long): Int = sessionDao.countSessionsInRange(fromMs, toMs)
     suspend fun getTotalDurationMs(fromMs: Long, toMs: Long): Long = sessionDao.sumDurationInRange(fromMs, toMs) ?: 0L
     suspend fun getCompletedTaskCount(fromMs: Long, toMs: Long): Int = sessionDao.countCompletedTasksInRange(fromMs, toMs)
+    fun observeSessionCountInRange(fromMs: Long, toMs: Long): Flow<Int> = sessionDao.observeSessionCountInRange(fromMs, toMs)
+    fun observeTotalDurationMsInRange(fromMs: Long, toMs: Long): Flow<Long> = sessionDao.observeSumDurationInRange(fromMs, toMs).map { it ?: 0L }
+    fun observeCompletedTaskCountInRange(fromMs: Long, toMs: Long): Flow<Int> = sessionDao.observeCompletedTasksInRange(fromMs, toMs)
     fun observeCompletedTaskIds(): Flow<List<String>> = sessionDao.observeCompletedTaskIds()
 
     fun observeAppConfigs(): Flow<List<AppConfigEntity>> = appConfigDao.observeAll()

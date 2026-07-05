@@ -16,7 +16,10 @@ import com.omniutility.feature.ownyourtime.data.db.entity.AppCategory
 import com.omniutility.feature.ownyourtime.data.repository.OwnYourTimeRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
+import javax.inject.Singleton
 
 @AndroidEntryPoint
 class SessionService : Service() {
@@ -30,6 +33,11 @@ class SessionService : Service() {
     private var funPackages: Set<String> = emptySet()
     private var allowedPackages: Set<String> = emptySet()
 
+    private val sessionMutex = Mutex()
+    private var funTimeUsedMs = 0L
+    private var isAccumulatorInitialized = false
+    private var lastCheckTime = 0L
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -37,9 +45,13 @@ class SessionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val durationMs = intent?.getLongExtra(EXTRA_DURATION_MS, 0L) ?: 0L
-        sessionId = intent?.getStringExtra(EXTRA_SESSION_ID)
+        val newSessionId = intent?.getStringExtra(EXTRA_SESSION_ID)
         
-        if (durationMs > 0 && sessionId != null) {
+        if (durationMs > 0 && newSessionId != null) {
+            if (newSessionId != sessionId) {
+                sessionId = newSessionId
+                isAccumulatorInitialized = false
+            }
             serviceScope.launch {
                 val prod = repository.getAppsByCategory(AppCategory.PRODUCTIVITY).map { it.packageName }
                 val sys = repository.getAppsByCategory(AppCategory.SYSTEM).map { it.packageName }
@@ -57,30 +69,55 @@ class SessionService : Service() {
 
     private fun startTimer(durationMs: Long) {
         countDownTimer?.cancel()
-        countDownTimer = object : CountDownTimer(durationMs, 1000) {
+        countDownTimer = object : CountDownTimer(durationMs, 300) {
+            private var lastNotificationUpdate = 0L
+
             override fun onTick(millisUntilFinished: Long) {
-                val notification = buildNotification(millisUntilFinished)
-                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                manager.notify(NOTIFICATION_ID, notification)
+                val now = System.currentTimeMillis()
+                // Update notification at most once per second
+                if (now - lastNotificationUpdate >= 1000) {
+                    lastNotificationUpdate = now
+                    val notification = buildNotification(millisUntilFinished)
+                    val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    manager.notify(NOTIFICATION_ID, notification)
+                }
                 
                 sessionId?.let { sid ->
                     serviceScope.launch {
-                        val session = repository.getSession(sid) ?: return@launch
-                        if (hasUsageStatsPermission()) {
-                            val funTimeUsed = calculateFunTimeUsed(session.startedAt, funPackages)
-                            repository.saveSession(session.copy(funTimeUsedMs = funTimeUsed))
+                        sessionMutex.withLock {
+                            val session = repository.getSession(sid) ?: return@launch
                             
-                            val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-                            val topApp = getTopApp(usm)
+                            if (!isAccumulatorInitialized) {
+                                funTimeUsedMs = session.funTimeUsedMs
+                                isAccumulatorInitialized = true
+                                lastCheckTime = System.currentTimeMillis()
+                            }
                             
-                            // Let the launcher be accessible to pick apps
-                            val isLauncher = topApp?.contains("launcher", ignoreCase = true) == true
+                            val tickNow = System.currentTimeMillis()
+                            val elapsed = tickNow - lastCheckTime
+                            lastCheckTime = tickNow
                             
-                            if (topApp != null && topApp != packageName && !isLauncher) {
-                                if (topApp !in allowedPackages) {
-                                    launchApp()
-                                } else if (topApp in funPackages && funTimeUsed >= session.funBudgetMs) {
-                                    launchApp()
+                            if (hasUsageStatsPermission()) {
+                                val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+                                val topApp = getTopApp(usm)
+                                
+                                // Let the launcher be accessible to pick apps
+                                val isLauncher = topApp?.contains("launcher", ignoreCase = true) == true
+                                val isFunApp = topApp != null && topApp in funPackages && !isLauncher
+                                
+                                if (isFunApp) {
+                                    funTimeUsedMs += elapsed
+                                }
+                                
+                                val updatedSession = session.copy(funTimeUsedMs = funTimeUsedMs)
+                                repository.saveSession(updatedSession)
+                                
+                                if (topApp != null && topApp != packageName && !isLauncher) {
+                                    if (topApp !in allowedPackages) {
+                                        launchApp()
+                                    } else if (topApp in funPackages && funTimeUsedMs >= session.funBudgetMs) {
+                                        launchApp()
+                                    }
                                 }
                             }
                         }
@@ -117,7 +154,11 @@ class SessionService : Service() {
 
     private fun launchApp() {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-        launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        launchIntent?.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+        )
         if (launchIntent != null) {
             startActivity(launchIntent)
         }
@@ -161,38 +202,7 @@ class SessionService : Service() {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    private fun calculateFunTimeUsed(startedAt: Long, funPackages: Set<String>): Long {
-        if (funPackages.isEmpty()) return 0L
-        
-        val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val events = usm.queryEvents(startedAt, System.currentTimeMillis())
-        var totalTime = 0L
-        val packageStartTimes = mutableMapOf<String, Long>()
 
-        while (events.hasNextEvent()) {
-            val event = UsageEvents.Event()
-            events.getNextEvent(event)
-            
-            if (funPackages.contains(event.packageName)) {
-                if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                    if (!packageStartTimes.containsKey(event.packageName)) {
-                        packageStartTimes[event.packageName] = event.timeStamp
-                    }
-                } else if (event.eventType == UsageEvents.Event.ACTIVITY_PAUSED || event.eventType == UsageEvents.Event.ACTIVITY_STOPPED) {
-                    val startTime = packageStartTimes.remove(event.packageName)
-                    if (startTime != null) {
-                        totalTime += (event.timeStamp - startTime)
-                    }
-                }
-            }
-        }
-        
-        val currentTime = System.currentTimeMillis()
-        for ((pkg, startTime) in packageStartTimes) {
-            totalTime += (currentTime - startTime)
-        }
-        return totalTime
-    }
 
     override fun onDestroy() {
         countDownTimer?.cancel()

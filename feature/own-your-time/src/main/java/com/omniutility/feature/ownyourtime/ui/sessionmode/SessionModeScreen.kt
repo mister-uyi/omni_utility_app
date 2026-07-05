@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
@@ -19,7 +22,12 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -95,66 +103,98 @@ fun SessionModeScreen(
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(16.dp)
         ) {
-            // Timer
+            // Circular countdown timer
             val remainingSecs = maxOf(0L, state.remainingTimeMs / 1000)
             val h = remainingSecs / 3600
             val m = (remainingSecs % 3600) / 60
             val s = remainingSecs % 60
             val timeString = String.format("%02d:%02d:%02d", h, m, s)
-            
-            Text(
-                text = timeString,
-                color = Color.White,
-                fontSize = 48.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-            Text(
-                text = "remaining",
-                color = Color(0xFF8A8A8A),
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            val progress = if (state.totalTimeMs > 0) 1f - (state.remainingTimeMs.toFloat() / state.totalTimeMs.toFloat()) else 0f
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFFF5A623),
-                trackColor = Color(0xFF2A2A2A)
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            val funRemainingSecs = maxOf(0L, state.funBudgetRemainingMs / 1000)
-            val fm = funRemainingSecs / 60
-            val fs = funRemainingSecs % 60
-            val funProgress = if (state.funBudgetTotalMs > 0) state.funBudgetRemainingMs.toFloat() / state.funBudgetTotalMs.toFloat() else 0f
-            Text(
-                text = "Fun budget: ${fm}m ${fs}s left",
-                color = Color(0xFFF5A623),
-                fontSize = 14.sp
-            )
-            LinearProgressIndicator(
-                progress = { funProgress },
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                color = Color(0xFFF5A623),
-                trackColor = Color(0xFF2A2A2A)
-            )
-            
+            val progress = if (state.totalTimeMs > 0) state.remainingTimeMs.toFloat() / state.totalTimeMs.toFloat() else 0f
+            val accentColor = Color(0xFFF5A623)
+            val trackColor = Color(0xFF2A2A2A)
+
             Spacer(modifier = Modifier.height(24.dp))
-            
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                item {
-                    Text("Tasks", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
+
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(260.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .drawBehind {
+                        val strokeWidth = 18.dp.toPx()
+                        val diameter = size.minDimension - strokeWidth
+                        val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+                        val arcSize = Size(diameter, diameter)
+                        // Track
+                        drawArc(
+                            color = trackColor,
+                            startAngle = -90f,
+                            sweepAngle = 360f,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = Stroke(strokeWidth, cap = StrokeCap.Round)
+                        )
+                        // Progress
+                        drawArc(
+                            color = accentColor,
+                            startAngle = -90f,
+                            sweepAngle = 360f * progress,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = Stroke(strokeWidth, cap = StrokeCap.Round)
+                        )
+                    }
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = timeString,
+                        color = Color.White,
+                        fontSize = 38.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "remaining",
+                        color = Color(0xFF8A8A8A),
+                        fontSize = 13.sp
+                    )
                 }
-                items(state.tasks) { task ->
+            }
+
+            // Fun budget — only shown if there are fun apps
+            if (state.funBudgetTotalMs > 0 && state.funApps.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                val funRemainingSecs = maxOf(0L, state.funBudgetRemainingMs / 1000)
+                val fm = funRemainingSecs / 60
+                val fs = funRemainingSecs % 60
+                val funProgress = if (state.funBudgetTotalMs > 0) state.funBudgetRemainingMs.toFloat() / state.funBudgetTotalMs.toFloat() else 0f
+                Text(
+                    text = "Fun budget: ${fm}m ${fs}s left",
+                    color = Color(0xFFF5A623),
+                    fontSize = 14.sp
+                )
+                LinearProgressIndicator(
+                    progress = { funProgress },
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    color = Color(0xFFF5A623),
+                    trackColor = Color(0xFF2A2A2A)
+                )
+            }
+            
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Tasks — title only shown if tasks exist
+            if (state.tasks.isNotEmpty()) {
+                Text("Tasks", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                state.tasks.forEach { task ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { viewModel.toggleTaskCompletion(task.id) }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
@@ -181,31 +221,19 @@ fun SessionModeScreen(
                         }
                     }
                 }
-                
-                item {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text("Productivity", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                }
-                item {
-                    AppRow(apps = state.productivityApps)
-                }
-                
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("System", color = Color(0xFF8A8A8A), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                }
-                item {
-                    AppRow(apps = state.systemApps)
-                }
-                
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Fun", color = Color(0xFFF5A623), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                }
-                item {
-                    AppRow(apps = state.funApps, disabled = state.funBudgetRemainingMs <= 0)
-                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
+
+            // Apps at the bottom — reachable by thumb
+            val allApps = state.productivityApps + state.systemApps
+            if (allApps.isNotEmpty()) {
+                AppGrid(apps = allApps)
+            }
+            if (state.funApps.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                AppGrid(apps = state.funApps, disabled = state.funBudgetRemainingMs <= 0)
+            }
+            Spacer(modifier = Modifier.height(56.dp)) // space for End Session button
         }
         
         TextButton(
@@ -294,12 +322,14 @@ fun SessionModeScreen(
                 val completed = state.tasks.count { it.completed }
                 val total = state.tasks.size
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "$completed of $total tasks completed",
-                        color = Color(0xFFF5A623),
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    if (total > 0) {
+                        Text(
+                            text = "$completed of $total tasks completed",
+                            color = Color(0xFFF5A623),
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                     Text("Continuing will not reset your fun app budget", color = Color(0xFF8A8A8A), fontSize = 12.sp)
                 }
             },
@@ -349,6 +379,18 @@ fun SessionModeScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
+                            selected = selectedMinutes == 5L,
+                            onClick = { selectedMinutes = 5L },
+                            label = { Text("+5m", color = Color.White) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(0xFF3A3A3A))
+                        )
+                        FilterChip(
+                            selected = selectedMinutes == 10L,
+                            onClick = { selectedMinutes = 10L },
+                            label = { Text("+10m", color = Color.White) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(0xFF3A3A3A))
+                        )
+                        FilterChip(
                             selected = selectedMinutes == 15L,
                             onClick = { selectedMinutes = 15L },
                             label = { Text("+15m", color = Color.White) },
@@ -396,43 +438,45 @@ fun SessionModeScreen(
 }
 
 @Composable
-fun AppRow(apps: List<AppUI>, disabled: Boolean = false) {
+fun AppGrid(apps: List<AppUI>, disabled: Boolean = false) {
     val context = LocalContext.current
     val pm = context.packageManager
-    LazyRow(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(apps) { app ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .width(72.dp)
-                    .clickable {
-                        if (disabled) {
-                            Toast.makeText(context, "Fun budget used. Back to work.", Toast.LENGTH_SHORT).show()
-                        } else {
-                            val launchIntent = pm.getLaunchIntentForPackage(app.packageName)
-                            if (launchIntent != null) {
-                                context.startActivity(launchIntent)
+    val columns = 5
+    val rows = (apps.size + columns - 1) / columns
+    // Fixed height grid since LazyVerticalGrid can't live inside LazyColumn
+    val itemHeight = 80.dp
+    val gridHeight = itemHeight * rows
+
+    Box(modifier = Modifier.fillMaxWidth().height(gridHeight)) {
+        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+            columns = GridCells.Fixed(columns),
+            modifier = Modifier.fillMaxSize(),
+            userScrollEnabled = false,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(apps) { app ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clickable {
+                            if (disabled) {
+                                Toast.makeText(context, "Fun budget used. Back to work.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                val launchIntent = pm.getLaunchIntentForPackage(app.packageName)
+                                if (launchIntent != null) {
+                                    context.startActivity(launchIntent)
+                                }
                             }
                         }
-                    }
-            ) {
-                com.omniutility.feature.ownyourtime.ui.settings.AppIcon(
-                    packageName = app.packageName,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(if (disabled) Color(0xFF2A2A2A) else Color.Transparent, shape = MaterialTheme.shapes.medium)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = app.label, 
-                    color = if (disabled) Color(0xFF8A8A8A) else Color.White, 
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                ) {
+                    com.omniutility.feature.ownyourtime.ui.settings.AppIcon(
+                        packageName = app.packageName,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(if (disabled) Color(0xFF2A2A2A) else Color.Transparent, shape = MaterialTheme.shapes.medium)
+                    )
+                }
             }
         }
     }

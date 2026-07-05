@@ -84,21 +84,22 @@ class DashboardViewModel @Inject constructor(
                 val (curStart, curEnd) = getMonthRange(offset)
                 val (prevStart, prevEnd) = getMonthRange(offset - 1)
 
-                val curSessions = repository.getSessionCount(curStart, curEnd)
-                val curTasks = repository.getCompletedTaskCount(curStart, curEnd)
-                val curDuration = repository.getTotalDurationMs(curStart, curEnd)
-
-                val prevSessions = repository.getSessionCount(prevStart, prevEnd)
-                val delta = curSessions - prevSessions
-
-                _uiState.update {
-                    it.copy(
-                        currentMonthSessions = curSessions,
-                        currentMonthTasks = curTasks,
-                        currentMonthDurationMs = curDuration,
-                        monthDeltaSessions = delta
-                    )
-                }
+                combine(
+                    repository.observeSessionCountInRange(curStart, curEnd),
+                    repository.observeCompletedTaskCountInRange(curStart, curEnd),
+                    repository.observeTotalDurationMsInRange(curStart, curEnd),
+                    repository.observeSessionCountInRange(prevStart, prevEnd)
+                ) { curSessions, curTasks, curDuration, prevSessions ->
+                    val delta = curSessions - prevSessions
+                    _uiState.update {
+                        it.copy(
+                            currentMonthSessions = curSessions,
+                            currentMonthTasks = curTasks,
+                            currentMonthDurationMs = curDuration,
+                            monthDeltaSessions = delta
+                        )
+                    }
+                }.collect()
             }
         }
 
