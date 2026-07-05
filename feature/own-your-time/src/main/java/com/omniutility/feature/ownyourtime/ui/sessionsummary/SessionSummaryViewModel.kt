@@ -33,10 +33,12 @@ class SessionSummaryViewModel @Inject constructor(
     val state: StateFlow<SessionSummaryState> = _state.asStateFlow()
 
     private var currentSessionId: String? = null
+    private var sessionObserveJob: kotlinx.coroutines.Job? = null
 
     fun loadSession(sessionId: String) {
         currentSessionId = sessionId
-        viewModelScope.launch {
+        sessionObserveJob?.cancel()
+        sessionObserveJob = viewModelScope.launch {
             repository.observeSession(sessionId).onEach { session ->
                 if (session == null) return@onEach
                 _state.update {
@@ -47,7 +49,7 @@ class SessionSummaryViewModel @Inject constructor(
                         funBudgetUsedMs = session.funTimeUsedMs
                     )
                 }
-            }.launchIn(viewModelScope)
+            }.launchIn(this)
 
             repository.observeSessionTasks(sessionId).onEach { tasks ->
                 val uiTasks = tasks.map { sessionTask ->
@@ -62,7 +64,7 @@ class SessionSummaryViewModel @Inject constructor(
                     )
                 }
                 _state.update { it.copy(tasks = uiTasks) }
-            }.launchIn(viewModelScope)
+            }.launchIn(this)
         }
     }
 

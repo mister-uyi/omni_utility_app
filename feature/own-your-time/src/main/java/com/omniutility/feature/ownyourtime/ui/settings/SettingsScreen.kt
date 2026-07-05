@@ -165,6 +165,55 @@ fun SettingsScreen(
                     modifier = Modifier.padding(top = 16.dp)
                 )
             }
+
+            // Picture-in-Picture Bypass Tip
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = surfaceColor.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Picture-in-Picture Bypass Warning",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Video apps like YouTube or Netflix can bypass focus sessions by entering Picture-in-Picture mode automatically. To enforce complete blocking, manually turn off the Picture-in-Picture permission for these apps in Android Settings.",
+                            fontSize = 12.sp,
+                            color = Color(0xFF8A8A8A)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        val context = androidx.compose.ui.platform.LocalContext.current
+                        Button(
+                            onClick = {
+                                try {
+                                    val intent = android.content.Intent("android.settings.PICTURE_IN_PICTURE_SETTINGS")
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    try {
+                                        val intent = android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
+                                        context.startActivity(intent)
+                                    } catch (ex: Exception) {
+                                        android.widget.Toast.makeText(context, "Could not open Settings", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A2A2A)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Open PiP Settings", color = Color.White, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
         }
 
         if (state.appPickerCategory != null) {

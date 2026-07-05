@@ -47,24 +47,70 @@ class SessionService : Service() {
         val durationMs = intent?.getLongExtra(EXTRA_DURATION_MS, 0L) ?: 0L
         val newSessionId = intent?.getStringExtra(EXTRA_SESSION_ID)
         
-        if (durationMs > 0 && newSessionId != null) {
+        if (newSessionId != null) {
             if (newSessionId != sessionId) {
                 sessionId = newSessionId
                 isAccumulatorInitialized = false
             }
+            
+            // Call startForeground synchronously with a placeholder duration to satisfy Android requirements immediately
+            val initialDuration = if (durationMs > 0) durationMs else 1000L * 60 * 30
+            startForeground(NOTIFICATION_ID, buildNotification(initialDuration))
+            
             serviceScope.launch {
+                val session = repository.getSession(newSessionId)
+                if (session == null) {
+                    withContext(Dispatchers.Main) {
+                        stopSelf()
+                    }
+                    return@launch
+                }
+                
+                val elapsedMs = System.currentTimeMillis() - session.startedAt
+                val remainingMs = session.plannedDurationMs - elapsedMs
+                
+                if (remainingMs <= 0) {
+                    withContext(Dispatchers.Main) {
+                        stopSelf()
+                    }
+                    return@launch
+                }
+
                 val prod = repository.getAppsByCategory(AppCategory.PRODUCTIVITY).map { it.packageName }
                 val sys = repository.getAppsByCategory(AppCategory.SYSTEM).map { it.packageName }
                 val funApps = repository.getAppsByCategory(AppCategory.FUN).map { it.packageName }
-                funPackages = funApps.toSet()
-                allowedPackages = (prod + sys + funApps + packageName + "com.android.launcher" + "com.google.android.apps.nexuslauncher").toSet()
+                
+                val rawFunPackages = funApps.toSet()
+                val rawAllowedPackages = (prod + sys + funApps + packageName + "com.android.launcher" + "com.google.android.apps.nexuslauncher").toSet()
+                
+                // Add Gemini app aliases to allowed/fun lists if user has added the Gemini app stub
+                val geminiAliases = setOf(
+                    "com.google.android.googlequicksearchbox",
+                    "com.google.android.apps.googleassistant"
+                )
+                val hasGeminiInFun = "com.google.android.apps.bard" in rawFunPackages
+                val hasGeminiInAllowed = "com.google.android.apps.bard" in rawAllowedPackages
+                
+                funPackages = if (hasGeminiInFun) rawFunPackages + geminiAliases else rawFunPackages
+                allowedPackages = if (hasGeminiInAllowed) rawAllowedPackages + geminiAliases else rawAllowedPackages
+
+                withContext(Dispatchers.Main) {
+                    startForeground(NOTIFICATION_ID, buildNotification(remainingMs))
+                    startTimer(remainingMs)
+                }
             }
-            startForeground(NOTIFICATION_ID, buildNotification(durationMs))
-            startTimer(durationMs)
         } else {
             stopSelf()
         }
-        return START_NOT_STICKY
+        return START_REDELIVER_INTENT
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // If session is active, relaunch the activity to keep it in foreground/recents
+        if (sessionId != null) {
+            launchApp()
+        }
     }
 
     private fun startTimer(durationMs: Long) {
@@ -201,8 +247,6 @@ class SessionService : Service() {
         }
         return mode == AppOpsManager.MODE_ALLOWED
     }
-
-
 
     override fun onDestroy() {
         countDownTimer?.cancel()

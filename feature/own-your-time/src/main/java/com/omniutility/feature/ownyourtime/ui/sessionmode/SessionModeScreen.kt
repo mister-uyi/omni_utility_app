@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -71,13 +72,8 @@ fun SessionModeScreen(
             }
         }
     }
+    // Service lifecycle is managed explicitly on session end/finish rather than screen disposal
 
-    DisposableEffect(Unit) {
-        onDispose {
-            val intent = Intent(context, com.omniutility.feature.ownyourtime.service.SessionService::class.java)
-            context.stopService(intent)
-        }
-    }
     
     var showTimeUpDialog by remember { mutableStateOf(false) }
     var showExtendPicker by remember { mutableStateOf(false) }
@@ -163,25 +159,8 @@ fun SessionModeScreen(
                 }
             }
 
-            // Fun budget — only shown if there are fun apps
-            if (state.funBudgetTotalMs > 0 && state.funApps.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                val funRemainingSecs = maxOf(0L, state.funBudgetRemainingMs / 1000)
-                val fm = funRemainingSecs / 60
-                val fs = funRemainingSecs % 60
-                val funProgress = if (state.funBudgetTotalMs > 0) state.funBudgetRemainingMs.toFloat() / state.funBudgetTotalMs.toFloat() else 0f
-                Text(
-                    text = "Fun budget: ${fm}m ${fs}s left",
-                    color = Color(0xFFF5A623),
-                    fontSize = 14.sp
-                )
-                LinearProgressIndicator(
-                    progress = { funProgress },
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    color = Color(0xFFF5A623),
-                    trackColor = Color(0xFF2A2A2A)
-                )
-            }
+            // Fun budget progress bar is now shown as a circular indicator directly around the fun app icons.
+
             
             Spacer(modifier = Modifier.weight(1f))
 
@@ -224,14 +203,17 @@ fun SessionModeScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Apps at the bottom — reachable by thumb
-            val allApps = state.productivityApps + state.systemApps
-            if (allApps.isNotEmpty()) {
-                AppGrid(apps = allApps)
-            }
-            if (state.funApps.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                AppGrid(apps = state.funApps, disabled = state.funBudgetRemainingMs <= 0)
+            // Apps at the bottom — reachable by thumb, sorted alphabetically
+            val combinedApps = (state.productivityApps + state.systemApps + state.funApps)
+                .sortedBy { it.label.lowercase() }
+            
+            if (combinedApps.isNotEmpty()) {
+                AppGrid(
+                    apps = combinedApps,
+                    funApps = state.funApps,
+                    funBudgetRemainingMs = state.funBudgetRemainingMs,
+                    funBudgetTotalMs = state.funBudgetTotalMs
+                )
             }
             Spacer(modifier = Modifier.height(56.dp)) // space for End Session button
         }
@@ -297,6 +279,8 @@ fun SessionModeScreen(
                     onClick = {
                         showManualEndConfirm = false
                         viewModel.endSession()
+                        val intent = Intent(context, com.omniutility.feature.ownyourtime.service.SessionService::class.java)
+                        context.stopService(intent)
                         onSessionEnded()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF5A623))
@@ -340,6 +324,8 @@ fun SessionModeScreen(
                         onClick = {
                             showTimeUpDialog = false
                             viewModel.endSession()
+                            val intent = Intent(context, com.omniutility.feature.ownyourtime.service.SessionService::class.java)
+                            context.stopService(intent)
                             onSessionEnded()
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -438,12 +424,16 @@ fun SessionModeScreen(
 }
 
 @Composable
-fun AppGrid(apps: List<AppUI>, disabled: Boolean = false) {
+fun AppGrid(
+    apps: List<AppUI>,
+    funApps: List<AppUI>,
+    funBudgetRemainingMs: Long,
+    funBudgetTotalMs: Long
+) {
     val context = LocalContext.current
     val pm = context.packageManager
     val columns = 5
     val rows = (apps.size + columns - 1) / columns
-    // Fixed height grid since LazyVerticalGrid can't live inside LazyColumn
     val itemHeight = 80.dp
     val gridHeight = itemHeight * rows
 
@@ -456,11 +446,14 @@ fun AppGrid(apps: List<AppUI>, disabled: Boolean = false) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(apps) { app ->
+                val isFunApp = funApps.any { it.packageName == app.packageName }
+                val isFunDisabled = isFunApp && funBudgetRemainingMs <= 0
+                
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .clickable {
-                            if (disabled) {
+                            if (isFunDisabled) {
                                 Toast.makeText(context, "Fun budget used. Back to work.", Toast.LENGTH_SHORT).show()
                             } else {
                                 val launchIntent = pm.getLaunchIntentForPackage(app.packageName)
@@ -470,12 +463,29 @@ fun AppGrid(apps: List<AppUI>, disabled: Boolean = false) {
                             }
                         }
                 ) {
-                    com.omniutility.feature.ownyourtime.ui.settings.AppIcon(
-                        packageName = app.packageName,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(if (disabled) Color(0xFF2A2A2A) else Color.Transparent, shape = MaterialTheme.shapes.medium)
-                    )
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.size(64.dp)
+                    ) {
+                        if (isFunApp && funBudgetTotalMs > 0) {
+                            val funProgress = maxOf(0f, funBudgetRemainingMs.toFloat() / funBudgetTotalMs.toFloat())
+                            CircularProgressIndicator(
+                                progress = { funProgress },
+                                modifier = Modifier.size(60.dp),
+                                color = Color(0xFFF5A623),
+                                strokeWidth = 3.dp,
+                                trackColor = Color(0xFF2A2A2A)
+                            )
+                        }
+                        
+                        com.omniutility.feature.ownyourtime.ui.settings.AppIcon(
+                            packageName = app.packageName,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(if (isFunDisabled) Color(0xFF2A2A2A) else Color.Transparent)
+                        )
+                    }
                 }
             }
         }

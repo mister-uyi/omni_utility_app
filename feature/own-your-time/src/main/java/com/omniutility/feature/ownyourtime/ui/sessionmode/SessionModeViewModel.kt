@@ -59,6 +59,7 @@ class SessionModeViewModel @Inject constructor(
     private var currentSessionId: String? = null
 
     private var timerJob: kotlinx.coroutines.Job? = null
+    private var sessionObserveJob: kotlinx.coroutines.Job? = null
 
     fun loadSession(sessionId: String) {
         currentSessionId = sessionId
@@ -76,7 +77,8 @@ class SessionModeViewModel @Inject constructor(
             }
         }
         
-        viewModelScope.launch {
+        sessionObserveJob?.cancel()
+        sessionObserveJob = viewModelScope.launch {
             repository.observeSession(sessionId).onEach { session ->
                 if (session == null) return@onEach
                 _state.update {
@@ -90,7 +92,7 @@ class SessionModeViewModel @Inject constructor(
                         funBudgetRemainingMs = session.funBudgetMs - session.funTimeUsedMs
                     )
                 }
-            }.launchIn(viewModelScope)
+            }.launchIn(this)
             
             // Load tasks
             repository.observeSessionTasks(sessionId).onEach { tasks ->
@@ -107,7 +109,7 @@ class SessionModeViewModel @Inject constructor(
                     )
                 }
                 _state.update { it.copy(tasks = uiTasks) }
-            }.launchIn(viewModelScope)
+            }.launchIn(this)
             
             // Load apps
             repository.observeAppConfigs().onEach { appConfigs ->
@@ -120,7 +122,7 @@ class SessionModeViewModel @Inject constructor(
                     systemApps = sysApps,
                     funApps = funApps
                 ) }
-            }.launchIn(viewModelScope)
+            }.launchIn(this)
         }
     }
 
