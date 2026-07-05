@@ -136,6 +136,45 @@ fun ShareTargetScreen(
 ) {
     var title by remember { mutableStateOf(initialTitle) }
     var url by remember { mutableStateOf(initialUrl) }
+    var isFetchingTitle by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialUrl) {
+        if (initialUrl.isNotBlank() && 
+            (initialTitle == initialUrl || initialTitle.isBlank() || 
+             initialTitle.startsWith("http://", ignoreCase = true) || 
+             initialTitle.startsWith("https://", ignoreCase = true))
+        ) {
+            isFetchingTitle = true
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val u = java.net.URL(initialUrl)
+                    val connection = u.openConnection() as java.net.HttpURLConnection
+                    connection.connectTimeout = 5000
+                    connection.readTimeout = 5000
+                    val inputStream = connection.inputStream
+                    val scanner = java.util.Scanner(inputStream).useDelimiter("\\A")
+                    if (scanner.hasNext()) {
+                        val html = scanner.next()
+                        val matcher = java.util.regex.Pattern.compile("<title>(.*?)</title>", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(html)
+                        if (matcher.find()) {
+                            val fetchedTitle = matcher.group(1)?.trim()
+                            if (!fetchedTitle.isNullOrBlank()) {
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    if (title == initialTitle) {
+                                        title = fetchedTitle
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    isFetchingTitle = false
+                }
+            }
+        }
+    }
     
     val selectedType = remember(url) {
         val trimmedUrl = url.trim()
@@ -188,7 +227,16 @@ fun ShareTargetScreen(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Task Title", color = Color(0xFF8A8A8A)) },
+                    label = { Text(if (isFetchingTitle) "Fetching Title..." else "Task Title", color = Color(0xFF8A8A8A)) },
+                    trailingIcon = {
+                        if (isFetchingTitle) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = accentColor,
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
