@@ -32,11 +32,25 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     onSessionStarted: (String) -> Unit,
+    onViewAllClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     var showSetupSheet by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
+
+    val grouped = remember(uiState.recentSessions) {
+        uiState.recentSessions.groupBy { sessionWithTasks ->
+            val cal = Calendar.getInstance().apply {
+                timeInMillis = sessionWithTasks.session.startedAt
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            cal.timeInMillis
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize().background(Color(0xFF0D0D0D))) {
         LazyColumn(
@@ -72,16 +86,48 @@ fun DashboardScreen(
 
             if (uiState.recentSessions.isNotEmpty()) {
                 item {
-                    Text(
-                        text = "All Sessions",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Recent Sessions",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "View All",
+                            color = Color(0xFFF5A623),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clickable { onViewAllClick() }
+                                .padding(8.dp)
+                        )
+                    }
                 }
-                items(uiState.recentSessions) { sessionWithTasks ->
-                    RecentSessionCard(sessionWithTasks)
+
+
+                grouped.forEach { (dateMillis, sessionsInDay) ->
+                    item(key = "home_header_$dateMillis") {
+                        DateGroupHeader(
+                            dateMillis = dateMillis,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                    items(
+                        items = sessionsInDay,
+                        key = { "home_${it.session.id}" }
+                    ) { sessionWithTasks ->
+                        RecentSessionCard(
+                            sessionWithTasks = sessionWithTasks,
+                            showDate = false
+                        )
+                    }
                 }
             } else {
                 item {
@@ -324,7 +370,11 @@ fun ConfigSummaryCard(
 }
 
 @Composable
-fun RecentSessionCard(sessionWithTasks: SessionWithTasks) {
+fun RecentSessionCard(
+    sessionWithTasks: SessionWithTasks,
+    showDate: Boolean = true,
+    modifier: Modifier = Modifier
+) {
     val session = sessionWithTasks.session
     val tasks = sessionWithTasks.tasks
     
@@ -338,7 +388,7 @@ fun RecentSessionCard(sessionWithTasks: SessionWithTasks) {
     val endTime = if (session.endedAt != null) timeFormat.format(session.endedAt!!) else "Ongoing"
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
@@ -351,8 +401,13 @@ fun RecentSessionCard(sessionWithTasks: SessionWithTasks) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(text = dateStr, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                Text(text = "$startTime - $endTime • $actualStr", fontSize = 14.sp, color = Color(0xFF8A8A8A))
+                if (showDate) {
+                    Text(text = dateStr, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                    Text(text = "$startTime - $endTime • $actualStr", fontSize = 14.sp, color = Color(0xFF8A8A8A))
+                } else {
+                    Text(text = "$startTime - $endTime", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                    Text(text = actualStr, fontSize = 14.sp, color = Color(0xFF8A8A8A))
+                }
             }
             
             // Progress Bar
@@ -376,5 +431,47 @@ fun RecentSessionCard(sessionWithTasks: SessionWithTasks) {
                 )
             }
         }
+    }
+}
+
+@Composable
+fun DateGroupHeader(
+    dateMillis: Long,
+    modifier: Modifier = Modifier
+) {
+    val today = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val yesterday = Calendar.getInstance().apply {
+        add(Calendar.DAY_OF_YEAR, -1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val headerText = when (dateMillis) {
+        today -> "Today"
+        yesterday -> "Yesterday"
+        else -> SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(dateMillis)
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+    ) {
+        Text(
+            text = headerText,
+            color = Color(0xFFF5A623),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        HorizontalDivider(color = Color(0xFF2A2A2A), thickness = 1.dp)
     }
 }

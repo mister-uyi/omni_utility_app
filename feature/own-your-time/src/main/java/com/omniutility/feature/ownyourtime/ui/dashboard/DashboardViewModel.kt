@@ -115,7 +115,7 @@ class DashboardViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            repository.observeAllSessions().flatMapLatest { sessions ->
+            repository.observeRecentSessions(20).flatMapLatest { sessions ->
                 if (sessions.isEmpty()) {
                     flowOf(emptyList())
                 } else {

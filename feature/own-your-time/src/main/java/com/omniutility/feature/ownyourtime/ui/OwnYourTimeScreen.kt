@@ -17,6 +17,7 @@ import com.omniutility.feature.ownyourtime.ui.settings.SettingsScreen
 import com.omniutility.feature.ownyourtime.ui.tasks.TasksScreen
 import com.omniutility.feature.ownyourtime.ui.sessionmode.SessionModeScreen
 import com.omniutility.feature.ownyourtime.ui.sessionsummary.SessionSummaryScreen
+import com.omniutility.feature.ownyourtime.ui.allsessions.AllSessionsScreen
 
 private enum class OytTab(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Default.DateRange),
@@ -31,6 +32,7 @@ fun OwnYourTimeScreen(
 ) {
     var activeSessionId by remember { mutableStateOf<String?>(null) }
     var summarySessionId by remember { mutableStateOf<String?>(null) }
+    var showAllSessions by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(OytTab.HOME) }
 
     if (activeSessionId != null) {
@@ -45,6 +47,10 @@ fun OwnYourTimeScreen(
         SessionSummaryScreen(
             sessionId = summarySessionId!!,
             onDone = { summarySessionId = null }
+        )
+    } else if (showAllSessions) {
+        AllSessionsScreen(
+            onBack = { showAllSessions = false }
         )
     } else {
         Scaffold(
@@ -75,6 +81,9 @@ fun OwnYourTimeScreen(
                     OytTab.HOME -> DashboardScreen(
                         onSessionStarted = { sessionId ->
                             activeSessionId = sessionId
+                        },
+                        onViewAllClick = {
+                            showAllSessions = true
                         }
                     )
                     OytTab.TASKS -> TasksScreen()
