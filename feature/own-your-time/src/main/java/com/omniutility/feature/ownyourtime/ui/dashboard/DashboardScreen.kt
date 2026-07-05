@@ -73,7 +73,7 @@ fun DashboardScreen(
             if (uiState.recentSessions.isNotEmpty()) {
                 item {
                     Text(
-                        text = "Recent Sessions",
+                        text = "All Sessions",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -86,7 +86,7 @@ fun DashboardScreen(
             } else {
                 item {
                     Text(
-                        text = "No recent sessions.",
+                        text = "No sessions.",
                         color = Color(0xFF8A8A8A),
                         modifier = Modifier.padding(16.dp)
                     )

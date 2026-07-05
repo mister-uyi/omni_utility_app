@@ -40,11 +40,34 @@ fun SettingsScreen(
 ) {
     val state by viewModel.state.collectAsState()
     
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    
     val accentColor = Color(0xFFF5A623)
     val surfaceColor = Color(0xFF1A1A1A)
     val borderColor = Color(0xFF2A2A2A)
 
-    Box(modifier = modifier.fillMaxSize().background(Color(0xFF0D0D0D))) {
+    val onRemoveApp: (AppConfigEntity) -> Unit = { app ->
+        viewModel.removeAppConfig(app.packageName)
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = "${app.appLabel} removed",
+                actionLabel = "Undo",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.addAppToCategory(app.packageName, app.appLabel, app.category)
+            }
+        }
+    }
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = Color(0xFF0D0D0D),
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -107,8 +130,7 @@ fun SettingsScreen(
                     surfaceColor = surfaceColor,
                     borderColor = borderColor,
                     onAddClick = { viewModel.showAppPicker(AppCategory.PRODUCTIVITY) },
-                    onChangeCategory = { pkg, label, cat -> viewModel.changeAppCategory(pkg, label, cat) },
-                    onRemove = { viewModel.removeAppConfig(it) }
+                    onRemove = onRemoveApp
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -120,8 +142,7 @@ fun SettingsScreen(
                     surfaceColor = surfaceColor,
                     borderColor = borderColor,
                     onAddClick = { viewModel.showAppPicker(AppCategory.FUN) },
-                    onChangeCategory = { pkg, label, cat -> viewModel.changeAppCategory(pkg, label, cat) },
-                    onRemove = { viewModel.removeAppConfig(it) }
+                    onRemove = onRemoveApp
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -133,8 +154,7 @@ fun SettingsScreen(
                     surfaceColor = surfaceColor,
                     borderColor = borderColor,
                     onAddClick = { viewModel.showAppPicker(AppCategory.SYSTEM) },
-                    onChangeCategory = { pkg, label, cat -> viewModel.changeAppCategory(pkg, label, cat) },
-                    onRemove = { viewModel.removeAppConfig(it) },
+                    onRemove = onRemoveApp,
                     isSystem = true
                 )
                 
@@ -158,6 +178,7 @@ fun SettingsScreen(
                 surfaceColor = surfaceColor,
                 accentColor = accentColor
             )
+        }
         }
     }
 }
@@ -247,8 +268,7 @@ fun AppCategorySection(
     surfaceColor: Color,
     borderColor: Color,
     onAddClick: () -> Unit,
-    onChangeCategory: (String, String, AppCategory) -> Unit,
-    onRemove: (String) -> Unit,
+    onRemove: (AppConfigEntity) -> Unit,
     isSystem: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -318,13 +338,15 @@ fun AppCategorySection(
             Column(modifier = Modifier.padding(bottom = 16.dp)) {
                 apps.forEach { app ->
                     val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = {
-                            if (it == SwipeToDismissBoxValue.EndToStart) {
-                                onRemove(app.packageName)
-                                true
-                            } else false
-                        }
+                        positionalThreshold = { totalDistance -> totalDistance * 0.75f }
                     )
+
+                    LaunchedEffect(dismissState.settledValue) {
+                        if (dismissState.settledValue == SwipeToDismissBoxValue.EndToStart) {
+                            onRemove(app)
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                        }
+                    }
                     SwipeToDismissBox(
                         state = dismissState,
                         backgroundContent = {
@@ -342,7 +364,6 @@ fun AppCategorySection(
                     ) {
                         AppRowItem(
                             app = app,
-                            onChangeCategory = { onChangeCategory(app.packageName, app.appLabel, it) },
                             surfaceColor = surfaceColor,
                             borderColor = borderColor
                         )
@@ -369,12 +390,9 @@ fun AppCategorySection(
 @Composable
 fun AppRowItem(
     app: AppConfigEntity,
-    onChangeCategory: (AppCategory) -> Unit,
     surfaceColor: Color,
     borderColor: Color
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-    
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -388,38 +406,6 @@ fun AppRowItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(app.appLabel, color = Color.White, fontSize = 16.sp)
             Text(app.packageName, color = Color(0xFF8A8A8A), fontSize = 12.sp)
-        }
-        
-        Box {
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF2A2A2A))
-                    .clickable { showMenu = true }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(app.category.name, color = Color.White, fontSize = 12.sp)
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-            }
-            
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false },
-                modifier = Modifier.background(surfaceColor)
-            ) {
-                AppCategory.values().forEach { cat ->
-                    if (cat != AppCategory.SKIP) {
-                        DropdownMenuItem(
-                            text = { Text(cat.name, color = Color.White) },
-                            onClick = { 
-                                onChangeCategory(cat)
-                                showMenu = false
-                            }
-                        )
-                    }
-                }
-            }
         }
     }
 }

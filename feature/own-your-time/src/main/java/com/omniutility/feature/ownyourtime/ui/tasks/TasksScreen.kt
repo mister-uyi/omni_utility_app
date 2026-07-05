@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
@@ -35,10 +35,28 @@ fun TasksScreen(
     val tasks by viewModel.tasks.collectAsState()
     var editingTask by remember { mutableStateOf<TaskEntity?>(null) }
     var showSheet by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    val onDeleteTask: (TaskEntity) -> Unit = { task ->
+        viewModel.deleteTask(task)
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = "Task deleted",
+                actionLabel = "Undo",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.restoreTask(task)
+            }
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Color(0xFF0D0D0D),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { 
@@ -97,10 +115,10 @@ fun TasksScreen(
                             )
                         }
                         items(openTasks, key = { it.id }) { task ->
-                            TaskListItem(task = task, viewModel = viewModel, onEdit = {
+                            TaskListItem(task = task, onEdit = {
                                 editingTask = task
                                 showSheet = true
-                            })
+                            }, onDelete = onDeleteTask)
                         }
                     }
                     
@@ -115,10 +133,10 @@ fun TasksScreen(
                             )
                         }
                         items(completedTasks, key = { it.id }) { task ->
-                            TaskListItem(task = task, viewModel = viewModel, onEdit = {
+                            TaskListItem(task = task, onEdit = {
                                 editingTask = task
                                 showSheet = true
-                            })
+                            }, onDelete = onDeleteTask)
                         }
                     }
                 }
@@ -140,15 +158,17 @@ fun TasksScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskListItem(task: TaskEntity, viewModel: TasksViewModel, onEdit: () -> Unit) {
+fun TaskListItem(task: TaskEntity, onEdit: () -> Unit, onDelete: (TaskEntity) -> Unit) {
     val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            if (it == SwipeToDismissBoxValue.EndToStart) {
-                viewModel.deleteTask(task)
-                true
-            } else false
-        }
+        positionalThreshold = { totalDistance -> totalDistance * 0.75f }
     )
+
+    LaunchedEffect(dismissState.settledValue) {
+        if (dismissState.settledValue == SwipeToDismissBoxValue.EndToStart) {
+            onDelete(task)
+            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+        }
+    }
     
     SwipeToDismissBox(
         state = dismissState,
@@ -179,7 +199,7 @@ fun TaskCard(
 ) {
     val icon = when (task.type) {
         TaskType.TEXT -> Icons.AutoMirrored.Filled.List
-        TaskType.WEB_LINK -> Icons.Default.Info
+        TaskType.WEB_LINK -> Icons.Default.Search
         TaskType.YOUTUBE_LINK -> Icons.Default.PlayArrow
     }
 
