@@ -134,56 +134,9 @@ fun ShareTargetScreen(
     onSave: (String, TaskType, String?) -> Unit,
     onCancel: () -> Unit
 ) {
-    var title by remember { mutableStateOf(initialTitle) }
-    var url by remember { mutableStateOf(initialUrl) }
-    var isFetchingTitle by remember { mutableStateOf(false) }
-
-    LaunchedEffect(initialUrl) {
-        if (initialUrl.isNotBlank() && 
-            (initialTitle == initialUrl || initialTitle.isBlank() || 
-             initialTitle.startsWith("http://", ignoreCase = true) || 
-             initialTitle.startsWith("https://", ignoreCase = true))
-        ) {
-            isFetchingTitle = true
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                try {
-                    val u = java.net.URL(initialUrl)
-                    val connection = u.openConnection() as java.net.HttpURLConnection
-                    connection.connectTimeout = 5000
-                    connection.readTimeout = 5000
-                    val inputStream = connection.inputStream
-                    val scanner = java.util.Scanner(inputStream).useDelimiter("\\A")
-                    if (scanner.hasNext()) {
-                        val html = scanner.next()
-                        val matcher = java.util.regex.Pattern.compile("<title>(.*?)</title>", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(html)
-                        if (matcher.find()) {
-                            val fetchedTitle = matcher.group(1)?.trim()
-                            if (!fetchedTitle.isNullOrBlank()) {
-                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                    if (title == initialTitle) {
-                                        title = fetchedTitle
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                } finally {
-                    isFetchingTitle = false
-                }
-            }
-        }
-    }
-    
-    val selectedType = remember(url) {
-        val trimmedUrl = url.trim()
-        when {
-            trimmedUrl.isBlank() -> TaskType.TEXT
-            trimmedUrl.contains("youtube.com", ignoreCase = true) || trimmedUrl.contains("youtu.be", ignoreCase = true) -> TaskType.YOUTUBE_LINK
-            else -> TaskType.WEB_LINK
-        }
-    }
+    val coroutineScope = rememberCoroutineScope()
+    var input by remember { mutableStateOf(if (initialUrl.isNotBlank()) initialUrl else initialTitle) }
+    var isFetching by remember { mutableStateOf(false) }
 
     val accentColor = Color(0xFFF5A623)
     val surfaceColor = Color(0xFF1A1A1A)
@@ -225,18 +178,9 @@ fun ShareTargetScreen(
                 )
 
                 OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(if (isFetchingTitle) "Fetching Title..." else "Task Title", color = Color(0xFF8A8A8A)) },
-                    trailingIcon = {
-                        if (isFetchingTitle) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = accentColor,
-                                strokeWidth = 2.dp
-                            )
-                        }
-                    },
+                    value = input,
+                    onValueChange = { input = it },
+                    label = { Text("Task (Text or URL)", color = Color(0xFF8A8A8A)) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
@@ -245,25 +189,9 @@ fun ShareTargetScreen(
                         cursorColor = accentColor
                     ),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    enabled = !isFetching
                 )
-
-                if (selectedType != TaskType.TEXT) {
-                    OutlinedTextField(
-                        value = url,
-                        onValueChange = { url = it },
-                        label = { Text("Link URL", color = Color(0xFF8A8A8A)) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = accentColor,
-                            unfocusedBorderColor = borderColor,
-                            cursorColor = accentColor
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -276,23 +204,60 @@ fun ShareTargetScreen(
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
                         border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = !isFetching
                     ) {
                         Text("Cancel")
                     }
 
                     Button(
                         onClick = {
-                            if (title.isNotBlank()) {
-                                onSave(title, selectedType, url.takeIf { selectedType != TaskType.TEXT })
+                            val text = input.trim()
+                            if (text.isNotBlank()) {
+                                if (text.startsWith("http://", ignoreCase = true) || text.startsWith("https://", ignoreCase = true)) {
+                                    val isYoutube = text.contains("youtube.com", ignoreCase = true) || text.contains("youtu.be", ignoreCase = true)
+                                    val outType = if (isYoutube) TaskType.YOUTUBE_LINK else TaskType.WEB_LINK
+                                    
+                                    isFetching = true
+                                    coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                        var pageTitle = text
+                                        try {
+                                            val u = java.net.URL(text)
+                                            val connection = u.openConnection() as java.net.HttpURLConnection
+                                            connection.connectTimeout = 5000
+                                            connection.readTimeout = 5000
+                                            val inputStream = connection.inputStream
+                                            val scanner = java.util.Scanner(inputStream).useDelimiter("\\A")
+                                            if (scanner.hasNext()) {
+                                                val html = scanner.next()
+                                                val matcher = java.util.regex.Pattern.compile("<title>(.*?)</title>", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(html)
+                                                if (matcher.find()) {
+                                                    pageTitle = matcher.group(1)?.trim() ?: text
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                            isFetching = false
+                                            onSave(pageTitle, outType, text)
+                                        }
+                                    }
+                                } else {
+                                    onSave(text, TaskType.TEXT, null)
+                                }
                             }
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor),
                         shape = RoundedCornerShape(8.dp),
-                        enabled = title.isNotBlank()
+                        enabled = input.isNotBlank() && !isFetching
                     ) {
-                        Text("Add Task", color = Color(0xFF0D0D0D), fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isFetching) "Fetching title..." else "Add Task",
+                            color = Color(0xFF0D0D0D),
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
