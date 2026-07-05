@@ -22,6 +22,7 @@
 
         <activity
             android:name=".activity.ShareTargetActivity"
+            android:label="Add to Tasks"
             android:exported="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar">
             <intent-filter>
