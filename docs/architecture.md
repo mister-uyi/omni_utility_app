@@ -91,7 +91,7 @@ To add a brand-new feature to this multi-functional app:
 ### Feature C: Own Your Time (`:feature:own-your-time`)
 * **Purpose:** A focus session manager and app blocker that intercepts unauthorized app usage to maintain user focus.
 * **Key Components:**
-  * **App Interception & Blocking:** Uses a `ForegroundService` observing `UsageStatsManager` to detect when prohibited apps are opened during active sessions.
+  * **App Interception & Blocking:** Uses a `ForegroundService` observing `UsageStatsManager` to detect when prohibited apps are opened during active sessions. Real-time fun app usage tracking is calculated dynamically in memory via service wall-clock tracking (rather than delayed `UsageEvents` query cycles) to ensure instant blocking once the session fun budget is exceeded.
   * **Bypassing Background Restrictions:** Explicitly relies on the `SYSTEM_ALERT_WINDOW` (Display over other apps) permission to allow the background service to bounce the user back to the focus screen natively, overriding Android 10+ background activity start restrictions.
   * **Task Management:** Allows users to build lists of reusable "Task Templates" (text, deep links) tracked iteratively per session.
-  * **Activity Backstack Manipulation:** Lock screens explicitly use `Intent.FLAG_ACTIVITY_CLEAR_TASK` alongside Compose `BackHandler` blocks to securely trap the user and destroy the blocked app's history stack.
+  * **Activity Backstack Manipulation:** Utilizes `launchMode="singleTask"` for the host activity, paired with `Intent.FLAG_ACTIVITY_NEW_TASK`, `FLAG_ACTIVITY_SINGLE_TOP`, and `FLAG_ACTIVITY_REORDER_TO_FRONT` flags, to securely bring the blocking overlay screen to the foreground and prevent back-navigation bypasses.
