@@ -15,10 +15,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +43,7 @@ import android.webkit.WebViewClient
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.omniutility.feature.ownyourtime.data.db.entity.TaskType
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionModeScreen(
     sessionId: String,
@@ -78,6 +81,7 @@ fun SessionModeScreen(
     var showTimeUpDialog by remember { mutableStateOf(false) }
     var showExtendPicker by remember { mutableStateOf(false) }
     var showManualEndConfirm by remember { mutableStateOf(false) }
+    var showTasksBottomSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.remainingTimeMs, state.totalTimeMs) {
         if (state.totalTimeMs > 0 && state.remainingTimeMs <= 0L && !showExtendPicker) {
@@ -164,46 +168,55 @@ fun SessionModeScreen(
             
             Spacer(modifier = Modifier.weight(1f))
 
-            // Tasks — title only shown if tasks exist
-            if (state.tasks.isNotEmpty()) {
-                Text("Tasks", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                state.tasks.forEach { task ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.toggleTaskCompletion(task.id) }
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = task.completed,
-                            onCheckedChange = { viewModel.toggleTaskCompletion(task.id) },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = Color(0xFFF5A623),
-                                uncheckedColor = Color(0xFF8A8A8A)
-                            )
+            // Tappable summary of open tasks
+            val openTasks = state.tasks.filter { !it.completed }
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp)
+                    .clickable { showTasksBottomSheet = true }
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (openTasks.isEmpty()) "No tasks remaining" else "${openTasks.size} Tasks Remaining",
+                            fontWeight = FontWeight.Bold,
+                            color = if (openTasks.isEmpty()) Color(0xFF8A8A8A) else Color(0xFFF5A623),
+                            fontSize = 16.sp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(task.title, color = if (task.completed) Color(0xFF8A8A8A) else Color.White)
-                            if (!task.url.isNullOrBlank()) {
+                        if (openTasks.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            openTasks.take(2).forEach { task ->
                                 Text(
-                                    text = task.url,
-                                    color = Color(0xFFF5A623),
-                                    fontSize = 12.sp,
+                                    text = "• ${task.title}",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
-                                    modifier = Modifier
-                                        .clickable { activeUrl = task.url }
-                                        .padding(vertical = 2.dp)
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            if (openTasks.size > 2) {
+                                Text(
+                                    text = "... and ${openTasks.size - 2} more",
+                                    color = Color(0xFF8A8A8A),
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(start = 8.dp, top = 2.dp)
                                 )
                             }
                         }
                     }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "View All Tasks",
+                        tint = Color(0xFF8A8A8A),
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Apps at the bottom — reachable by thumb, sorted alphabetically
@@ -230,6 +243,84 @@ fun SessionModeScreen(
                 .padding(16.dp)
         ) {
             Text("End Session", color = Color(0xFF8A8A8A))
+        }
+
+        if (showTasksBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showTasksBottomSheet = false },
+                containerColor = Color(0xFF1A1A1A)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .navigationBarsPadding()
+                ) {
+                    Text(
+                        text = "Session Tasks",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val openTasks = state.tasks.filter { !it.completed }
+                    val completedTasks = state.tasks.filter { it.completed }
+
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        if (openTasks.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Open",
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                            }
+                            items(openTasks) { task ->
+                                SessionTaskItem(
+                                    task = task,
+                                    onToggleCompletion = { viewModel.toggleTaskCompletion(task.id) },
+                                    onUrlClick = { activeUrl = task.url }
+                                )
+                            }
+                        }
+                        if (completedTasks.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Completed",
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                                )
+                            }
+                            items(completedTasks) { task ->
+                                SessionTaskItem(
+                                    task = task,
+                                    onToggleCompletion = { viewModel.toggleTaskCompletion(task.id) },
+                                    onUrlClick = { activeUrl = task.url }
+                                )
+                            }
+                        }
+                        if (openTasks.isEmpty() && completedTasks.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("No tasks in this session.", color = Color(0xFF8A8A8A))
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
         }
     }
 
@@ -490,6 +581,51 @@ fun AppGrid(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SessionTaskItem(
+    task: SessionTaskUI,
+    onToggleCompletion: () -> Unit,
+    onUrlClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggleCompletion() }
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = task.completed,
+            onCheckedChange = { onToggleCompletion() },
+            colors = CheckboxDefaults.colors(
+                checkedColor = Color(0xFFF5A623),
+                uncheckedColor = Color(0xFF8A8A8A)
+            )
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = task.title, 
+                color = if (task.completed) Color(0xFF8A8A8A) else Color.White,
+                textDecoration = if (task.completed) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
+            )
+            if (!task.url.isNullOrBlank()) {
+                Text(
+                    text = task.url,
+                    color = Color(0xFFF5A623),
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                    modifier = Modifier
+                        .clickable { onUrlClick() }
+                        .padding(vertical = 2.dp)
+                )
             }
         }
     }
