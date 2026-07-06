@@ -83,8 +83,8 @@ fun SessionModeScreen(
     var showManualEndConfirm by remember { mutableStateOf(false) }
     var showTasksBottomSheet by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.remainingTimeMs, state.totalTimeMs) {
-        if (state.totalTimeMs > 0 && state.remainingTimeMs <= 0L && !showExtendPicker) {
+    LaunchedEffect(state.remainingTimeMs, state.totalTimeMs, state.sessionId, sessionId) {
+        if (state.sessionId == sessionId && state.totalTimeMs > 0 && state.remainingTimeMs <= 0L && !showExtendPicker) {
             showTimeUpDialog = true
         }
     }

@@ -63,6 +63,7 @@ class SessionModeViewModel @Inject constructor(
 
     fun loadSession(sessionId: String) {
         currentSessionId = sessionId
+        _state.value = SessionModeState(sessionId = sessionId)
         
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
