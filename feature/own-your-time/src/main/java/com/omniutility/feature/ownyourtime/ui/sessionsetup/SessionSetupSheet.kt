@@ -147,8 +147,16 @@ fun Step2Duration(state: SessionSetupState, viewModel: SessionSetupViewModel) {
                 inactiveTrackColor = Color(0xFF2A2A2A)
             )
         )
-        val funMinutes = (state.durationMs / 60_000) * state.funBudgetPercent / 100
-        Text("${funMinutes} minutes for fun apps", color = Color(0xFFF5A623), fontSize = 14.sp)
+        val funBudgetMs = state.durationMs * state.funBudgetPercent / 100
+        val totalSeconds = funBudgetMs / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        val budgetStr = when {
+            minutes == 0L -> "$seconds seconds"
+            seconds == 0L -> if (minutes == 1L) "1 minute" else "$minutes minutes"
+            else -> if (minutes == 1L) "1 minute $seconds seconds" else "$minutes minutes $seconds seconds"
+        }
+        Text("$budgetStr for fun apps", color = Color(0xFFF5A623), fontSize = 14.sp)
         
         Spacer(modifier = Modifier.height(24.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

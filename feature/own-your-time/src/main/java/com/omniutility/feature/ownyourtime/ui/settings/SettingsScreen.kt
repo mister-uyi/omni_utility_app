@@ -303,8 +303,16 @@ fun SessionDefaultsCard(
                     inactiveTrackColor = borderColor
                 )
             )
-            val minutes = (userConfig.defaultDurationMs / 60000) * userConfig.defaultFunBudgetPercent / 100
-            Text("$minutes minutes for fun apps", color = Color(0xFF8A8A8A), fontSize = 12.sp)
+            val funBudgetMs = userConfig.defaultDurationMs * userConfig.defaultFunBudgetPercent / 100
+            val totalSeconds = funBudgetMs / 1000
+            val minutes = totalSeconds / 60
+            val seconds = totalSeconds % 60
+            val budgetStr = when {
+                minutes == 0L -> "$seconds seconds"
+                seconds == 0L -> if (minutes == 1L) "1 minute" else "$minutes minutes"
+                else -> if (minutes == 1L) "1 minute $seconds seconds" else "$minutes minutes $seconds seconds"
+            }
+            Text("$budgetStr for fun apps", color = Color(0xFF8A8A8A), fontSize = 12.sp)
         }
     }
 }
