@@ -104,7 +104,7 @@ class DashboardViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            repository.observeRecentSessions(20).collect { sessions ->
+            repository.observeRecentSessions(10).collect { sessions ->
                 val now = System.currentTimeMillis()
                 sessions.forEach { session ->
                     if (session.endedAt == null && session.startedAt + session.plannedDurationMs < now) {
@@ -115,7 +115,7 @@ class DashboardViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            repository.observeRecentSessions(20).flatMapLatest { sessions ->
+            repository.observeRecentSessions(10).flatMapLatest { sessions ->
                 if (sessions.isEmpty()) {
                     flowOf(emptyList())
                 } else {
