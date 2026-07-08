@@ -18,10 +18,14 @@ object OwnYourTimeDatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): OwnYourTimeDatabase =
-        Room.databaseBuilder(context, OwnYourTimeDatabase::class.java, "own_your_time.db").build()
+        Room.databaseBuilder(context, OwnYourTimeDatabase::class.java, "own_your_time.db")
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides fun provideTaskDao(db: OwnYourTimeDatabase): TaskDao = db.taskDao()
     @Provides fun provideSessionDao(db: OwnYourTimeDatabase): SessionDao = db.sessionDao()
     @Provides fun provideAppConfigDao(db: OwnYourTimeDatabase): AppConfigDao = db.appConfigDao()
     @Provides fun provideUserConfigDao(db: OwnYourTimeDatabase): UserConfigDao = db.userConfigDao()
+    @Provides fun provideUserInterestDao(db: OwnYourTimeDatabase): UserInterestDao = db.userInterestDao()
+    @Provides fun providePassiveBudgetDao(db: OwnYourTimeDatabase): PassiveBudgetDao = db.passiveBudgetDao()
 }

@@ -14,10 +14,34 @@ import com.omniutility.ui.main.MainScreen
 import com.omniutility.feature.finance.ui.FinanceDashboardScreen
 import com.omniutility.feature.finance.ui.FinanceDashboardViewModel
 import com.omniutility.feature.ownyourtime.ui.OwnYourTimeScreen
+import androidx.activity.ComponentActivity
+import androidx.core.util.Consumer
+import android.content.Intent
 
 @Composable
 fun MainNavigation() {
   val backStack = rememberNavBackStack(Main)
+  val activity = LocalContext.current as? ComponentActivity
+
+  androidx.compose.runtime.DisposableEffect(activity) {
+    val listener = Consumer<Intent> { newIntent ->
+      if (newIntent.getBooleanExtra("EXTRA_SHOW_SESSION_SETUP", false)) {
+        if (backStack.lastOrNull() != OwnYourTime) {
+          backStack.add(OwnYourTime)
+        }
+      }
+    }
+    activity?.addOnNewIntentListener(listener)
+    onDispose { activity?.removeOnNewIntentListener(listener) }
+  }
+
+  androidx.compose.runtime.LaunchedEffect(activity?.intent) {
+    if (activity?.intent?.getBooleanExtra("EXTRA_SHOW_SESSION_SETUP", false) == true) {
+      if (backStack.lastOrNull() != OwnYourTime) {
+        backStack.add(OwnYourTime)
+      }
+    }
+  }
 
   NavDisplay(
     backStack = backStack,

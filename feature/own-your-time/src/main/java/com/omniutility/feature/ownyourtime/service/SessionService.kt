@@ -40,6 +40,7 @@ class SessionService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         createNotificationChannel()
     }
 
@@ -251,6 +252,7 @@ class SessionService : Service() {
     override fun onDestroy() {
         countDownTimer?.cancel()
         serviceScope.cancel()
+        isRunning = false
         super.onDestroy()
     }
 
@@ -261,5 +263,10 @@ class SessionService : Service() {
         const val NOTIFICATION_ID = 1
         const val EXTRA_DURATION_MS = "EXTRA_DURATION_MS"
         const val EXTRA_SESSION_ID = "EXTRA_SESSION_ID"
+
+        /** True while this service is alive — used by PassiveTrackingService to pause. */
+        @Volatile
+        var isRunning: Boolean = false
+            private set
     }
 }

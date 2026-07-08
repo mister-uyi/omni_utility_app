@@ -12,9 +12,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +24,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import com.omniutility.core.ui.HUDPill
+import com.omniutility.core.ui.HUDPillMessage
+import com.omniutility.core.ui.HUDPillType
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -30,6 +35,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.omniutility.feature.ownyourtime.data.db.entity.AppCategory
 import com.omniutility.feature.ownyourtime.data.db.entity.AppConfigEntity
 import com.omniutility.feature.ownyourtime.data.db.entity.UserConfigEntity
+import com.omniutility.feature.ownyourtime.data.db.entity.UserInterestEntity
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +48,7 @@ fun SettingsScreen(
     
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var hudMessage by remember { mutableStateOf<HUDPillMessage?>(null) }
     
     val accentColor = Color(0xFFF5A623)
     val surfaceColor = Color(0xFF1A1A1A)
@@ -166,6 +173,212 @@ fun SettingsScreen(
                 )
             }
 
+            // Passive Tracking Section
+            item {
+                SectionTitle("Passive Tracking")
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(surfaceColor)
+                        .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Enable toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Enable Passive Tracking", color = Color.White, fontSize = 14.sp)
+                        Switch(
+                            checked = state.passiveBudgetEnabled,
+                            onCheckedChange = { viewModel.updatePassiveBudgetEnabled(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = accentColor,
+                                checkedTrackColor = accentColor.copy(alpha = 0.3f),
+                                uncheckedThumbColor = Color(0xFF8A8A8A),
+                                uncheckedTrackColor = borderColor
+                            )
+                        )
+                    }
+
+                    if (state.passiveBudgetEnabled) {
+                        // Period selector chips
+                        Column {
+                            Text("Tracking Period", color = Color.White, fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val periods = listOf(30 to "30m", 60 to "1h", 120 to "2h", 240 to "4h")
+                                periods.forEach { (minutes, label) ->
+                                    val isSelected = state.passiveBudgetPeriodMinutes == minutes
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(if (isSelected) accentColor.copy(alpha = 0.2f) else Color.Transparent)
+                                            .border(1.dp, if (isSelected) accentColor else borderColor, RoundedCornerShape(16.dp))
+                                            .clickable { viewModel.updatePassiveBudgetPeriod(minutes) }
+                                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(label, color = if (isSelected) accentColor else Color.White, fontSize = 14.sp)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Budget percentage slider
+                        Column {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Fun Budget", color = Color.White, fontSize = 14.sp)
+                                Text("${state.passiveBudgetPercent}%", color = accentColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = state.passiveBudgetPercent.toFloat(),
+                                onValueChange = { viewModel.updatePassiveBudgetPercent(it.toInt()) },
+                                valueRange = 0f..50f,
+                                steps = 49,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = accentColor,
+                                    activeTrackColor = accentColor,
+                                    inactiveTrackColor = borderColor
+                                )
+                            )
+                            val funMinutes = state.passiveBudgetPeriodMinutes * state.passiveBudgetPercent / 100
+                            val periodLabel = when (state.passiveBudgetPeriodMinutes) {
+                                30 -> "30 minutes"
+                                60 -> "hour"
+                                120 -> "2 hours"
+                                240 -> "4 hours"
+                                else -> "${state.passiveBudgetPeriodMinutes} minutes"
+                            }
+                            Text(
+                                "$funMinutes minutes of fun per $periodLabel",
+                                color = Color(0xFF8A8A8A),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Topics of Interest Section
+            item {
+                SectionTitle("Topics of Interest")
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(surfaceColor)
+                        .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Current interests list
+                    if (state.interests.isNotEmpty()) {
+                        state.interests.forEach { interest ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF0D0D0D))
+                                    .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(interest.topic, color = Color.White, fontSize = 14.sp)
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Remove ${interest.topic}",
+                                    tint = Color(0xFF8A8A8A),
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clickable { viewModel.removeInterest(interest.id) }
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            "No topics added yet. Add some below!",
+                            color = Color(0xFF8A8A8A),
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    // Pre-suggested topic chips
+                    val addedTopics = state.interests.map { it.topic.lowercase() }.toSet()
+                    val suggestions = listOf(
+                        "System Design", "Machine Learning", "History", "Space",
+                        "Philosophy", "Fitness", "Cooking", "Finance", "Music", "Art"
+                    ).filter { it.lowercase() !in addedTopics }
+
+                    if (suggestions.isNotEmpty()) {
+                        Text("Suggestions", color = Color(0xFF8A8A8A), fontSize = 12.sp)
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            suggestions.forEach { suggestion ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .border(1.dp, borderColor, RoundedCornerShape(16.dp))
+                                        .clickable { viewModel.addInterest(suggestion) }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(suggestion, color = accentColor, fontSize = 13.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    // Add custom topic field
+                    var newTopic by remember { mutableStateOf("") }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = newTopic,
+                            onValueChange = { newTopic = it },
+                            placeholder = { Text("Add a topic…", color = Color(0xFF8A8A8A)) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = accentColor,
+                                unfocusedBorderColor = borderColor,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                cursorColor = accentColor
+                            ),
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+                        Button(
+                            onClick = {
+                                if (newTopic.isNotBlank()) {
+                                    viewModel.addInterest(newTopic)
+                                    newTopic = ""
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = accentColor,
+                                contentColor = Color(0xFF0D0D0D)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text("Add", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
             // Picture-in-Picture Bypass Tip
             item {
                 Card(
@@ -201,7 +414,7 @@ fun SettingsScreen(
                                         val intent = android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
                                         context.startActivity(intent)
                                     } catch (ex: Exception) {
-                                        android.widget.Toast.makeText(context, "Could not open Settings", android.widget.Toast.LENGTH_SHORT).show()
+                                        hudMessage = HUDPillMessage("Could not open Settings", HUDPillType.ERROR)
                                     }
                                 }
                             },
@@ -217,15 +430,31 @@ fun SettingsScreen(
         }
 
         if (state.appPickerCategory != null) {
+            val assignedPackages = state.productivityApps.map { it.packageName }.toSet() + 
+                                   state.funApps.map { it.packageName }.toSet() + 
+                                   state.systemApps.map { it.packageName }.toSet()
             AppPickerSheet(
-                installedApps = state.unassignedInstalledApps,
+                installedApps = state.pickerApps,
                 targetCategory = state.appPickerCategory!!,
                 onDismiss = { viewModel.hideAppPicker() },
-                onAppSelected = { app, category -> 
-                    viewModel.addAppToCategory(app.packageName, app.appLabel, category)
+                onToggleApp = { app, category, isAssigned -> 
+                    if (isAssigned) {
+                        viewModel.removeAppConfig(app.packageName)
+                    } else {
+                        viewModel.addAppToCategory(app.packageName, app.appLabel, category)
+                    }
                 },
+                assignedPackages = assignedPackages,
                 surfaceColor = surfaceColor,
                 accentColor = accentColor
+            )
+        }
+
+        hudMessage?.let { msg ->
+            HUDPill(
+                message = msg.message,
+                type = msg.type,
+                onDismiss = { hudMessage = null }
             )
         }
         }
@@ -473,7 +702,8 @@ fun AppPickerSheet(
     installedApps: List<InstalledApp>,
     targetCategory: AppCategory,
     onDismiss: () -> Unit,
-    onAppSelected: (InstalledApp, AppCategory) -> Unit,
+    onToggleApp: (InstalledApp, AppCategory, Boolean) -> Unit,
+    assignedPackages: Set<String>,
     surfaceColor: Color,
     accentColor: Color
 ) {
@@ -521,10 +751,11 @@ fun AppPickerSheet(
                 modifier = Modifier.fillMaxWidth().weight(1f)
             ) {
                 items(filteredApps) { app ->
+                    val isAssigned = app.packageName in assignedPackages
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onAppSelected(app, targetCategory) }
+                            .clickable { onToggleApp(app, targetCategory, isAssigned) }
                             .padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -537,7 +768,11 @@ fun AppPickerSheet(
                         }
                         
                         Box {
-                            Text("Assign", color = accentColor, fontWeight = FontWeight.Medium)
+                            if (isAssigned) {
+                                Icon(Icons.Default.Check, contentDescription = "Assigned", tint = accentColor)
+                            } else {
+                                Text("Assign", color = accentColor, fontWeight = FontWeight.Medium)
+                            }
                         }
                     }
                 }

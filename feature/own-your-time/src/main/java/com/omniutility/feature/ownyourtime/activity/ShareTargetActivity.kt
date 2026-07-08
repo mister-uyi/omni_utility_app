@@ -2,7 +2,6 @@ package com.omniutility.feature.ownyourtime.activity
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -26,8 +25,12 @@ import com.omniutility.feature.ownyourtime.data.db.entity.TaskType
 import com.omniutility.feature.ownyourtime.data.repository.OwnYourTimeRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.util.UUID
 import javax.inject.Inject
+import com.omniutility.core.ui.HUDPill
+import com.omniutility.core.ui.HUDPillMessage
+import com.omniutility.core.ui.HUDPillType
 
 @AndroidEntryPoint
 class ShareTargetActivity : ComponentActivity() {
@@ -43,8 +46,25 @@ class ShareTargetActivity : ComponentActivity() {
         
         val sharedText = handleIntent(intent)
         if (sharedText.isNullOrBlank()) {
-            Toast.makeText(this, "No content shared", Toast.LENGTH_SHORT).show()
-            finish()
+            setContent {
+                var hudMessage by remember { mutableStateOf<HUDPillMessage?>(null) }
+                LaunchedEffect(Unit) {
+                    hudMessage = HUDPillMessage("No content shared", HUDPillType.ERROR)
+                    delay(1500)
+                    finish()
+                }
+                MaterialTheme {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        hudMessage?.let { msg ->
+                            HUDPill(
+                                message = msg.message,
+                                type = msg.type,
+                                onDismiss = { hudMessage = null }
+                            )
+                        }
+                    }
+                }
+            }
             return
         }
 
@@ -57,18 +77,31 @@ class ShareTargetActivity : ComponentActivity() {
         val initialTitle = extractTitle(sharedText, url)
 
         setContent {
+            var hudMessage by remember { mutableStateOf<HUDPillMessage?>(null) }
+
             MaterialTheme {
-                ShareTargetScreen(
-                    initialTitle = initialTitle,
-                    initialUrl = url ?: "",
-                    initialType = initialType,
-                    onSave = { title, taskType, taskUrl ->
-                        saveTaskAndFinish(title, taskType, taskUrl)
-                    },
-                    onCancel = {
-                        finish()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    ShareTargetScreen(
+                        initialTitle = initialTitle,
+                        initialUrl = url ?: "",
+                        initialType = initialType,
+                        onSave = { title, taskType, taskUrl ->
+                            hudMessage = HUDPillMessage("Shared task added!", HUDPillType.SUCCESS)
+                            saveTaskAndFinish(title, taskType, taskUrl)
+                        },
+                        onCancel = {
+                            finish()
+                        }
+                    )
+
+                    hudMessage?.let { msg ->
+                        HUDPill(
+                            message = msg.message,
+                            type = msg.type,
+                            onDismiss = { hudMessage = null }
+                        )
                     }
-                )
+                }
             }
         }
     }
@@ -119,7 +152,7 @@ class ShareTargetActivity : ComponentActivity() {
                 isArchived = false
             )
             repository.saveTask(task)
-            Toast.makeText(this@ShareTargetActivity, "Shared task added!", Toast.LENGTH_SHORT).show()
+            delay(1500) // Delay 1.5s to let the user see the HUDPill!
             finish()
         }
     }

@@ -19,6 +19,15 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import com.omniutility.core.ui.HUDPill
+import com.omniutility.core.ui.HUDPillMessage
+import com.omniutility.core.ui.HUDPillType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,18 +39,21 @@ fun SessionSetupSheet(
     val state by viewModel.state.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var hudMessage by remember { mutableStateOf<HUDPillMessage?>(null) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = Color(0xFF1A1A1A)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .padding(bottom = 32.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(bottom = 32.dp)
+            ) {
             Text(
                 text = "Start Session",
                 color = Color.White,
@@ -120,20 +132,26 @@ fun SessionSetupSheet(
                     val hasUsageStats = mode == android.app.AppOpsManager.MODE_ALLOWED
 
                     if (!hasUsageStats) {
-                        android.widget.Toast.makeText(context, "Please grant Usage Access to block apps", android.widget.Toast.LENGTH_LONG).show()
-                        val intent = android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                        hudMessage = HUDPillMessage("Please grant Usage Access to block apps", HUDPillType.ERROR)
+                        scope.launch {
+                            delay(1200)
+                            val intent = android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            context.startActivity(intent)
                         }
-                        context.startActivity(intent)
                     } else if (!android.provider.Settings.canDrawOverlays(context)) {
-                        android.widget.Toast.makeText(context, "Please grant Display Over Other Apps permission to allow background blocks", android.widget.Toast.LENGTH_LONG).show()
-                        val intent = android.content.Intent(
-                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                            android.net.Uri.parse("package:${context.packageName}")
-                        ).apply {
-                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                        hudMessage = HUDPillMessage("Please grant Display Over Other Apps permission to allow background blocks", HUDPillType.ERROR)
+                        scope.launch {
+                            delay(1200)
+                            val intent = android.content.Intent(
+                                android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                android.net.Uri.parse("package:${context.packageName}")
+                            ).apply {
+                                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            context.startActivity(intent)
                         }
-                        context.startActivity(intent)
                     } else {
                         viewModel.commitSession { sessionId ->
                             onSessionStarted(sessionId)
@@ -147,5 +165,13 @@ fun SessionSetupSheet(
                 Text("Start Session", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         }
+        hudMessage?.let { msg ->
+            HUDPill(
+                message = msg.message,
+                type = msg.type,
+                onDismiss = { hudMessage = null }
+            )
+        }
     }
+}
 }

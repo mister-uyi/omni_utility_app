@@ -32,11 +32,11 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     onSessionStarted: (String) -> Unit,
+    onShowSetupSheet: () -> Unit,
     onViewAllClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
-    var showSetupSheet by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
 
     val grouped = remember(uiState.recentSessions) {
@@ -147,7 +147,7 @@ fun DashboardScreen(
                 if (activeSession != null) {
                     onSessionStarted(activeSession.id)
                 } else {
-                    showSetupSheet = true 
+                    onShowSetupSheet()
                 }
             },
             modifier = Modifier
@@ -156,13 +156,6 @@ fun DashboardScreen(
             containerColor = Color(0xFFF5A623),
             text = { Text(if (activeSession != null) "Resume Session" else "Start Session", color = Color.Black) },
             icon = { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black) }
-        )
-    }
-
-    if (showSetupSheet) {
-        SessionSetupSheet(
-            onDismiss = { showSetupSheet = false },
-            onSessionStarted = onSessionStarted
         )
     }
 }

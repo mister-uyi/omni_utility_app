@@ -22,6 +22,9 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.runtime.*
+import com.omniutility.core.ui.HUDPill
+import com.omniutility.core.ui.HUDPillMessage
+import com.omniutility.core.ui.HUDPillType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +85,7 @@ fun SessionModeScreen(
     var showExtendPicker by remember { mutableStateOf(false) }
     var showManualEndConfirm by remember { mutableStateOf(false) }
     var showTasksBottomSheet by remember { mutableStateOf(false) }
+    var hudMessage by remember { mutableStateOf<HUDPillMessage?>(null) }
 
     LaunchedEffect(state.remainingTimeMs, state.totalTimeMs, state.sessionId, sessionId) {
         if (state.sessionId == sessionId && state.totalTimeMs > 0 && state.remainingTimeMs <= 0L && !showExtendPicker) {
@@ -228,7 +232,10 @@ fun SessionModeScreen(
                     apps = combinedApps,
                     funApps = state.funApps,
                     funBudgetRemainingMs = state.funBudgetRemainingMs,
-                    funBudgetTotalMs = state.funBudgetTotalMs
+                    funBudgetTotalMs = state.funBudgetTotalMs,
+                    onFunAppBlocked = {
+                        hudMessage = HUDPillMessage("Fun budget used. Back to work.", HUDPillType.WARNING)
+                    }
                 )
             }
             Spacer(modifier = Modifier.height(56.dp)) // space for End Session button
@@ -243,6 +250,14 @@ fun SessionModeScreen(
                 .padding(16.dp)
         ) {
             Text("End Session", color = Color(0xFF8A8A8A))
+        }
+
+        hudMessage?.let { msg ->
+            HUDPill(
+                message = msg.message,
+                type = msg.type,
+                onDismiss = { hudMessage = null }
+            )
         }
 
         if (showTasksBottomSheet) {
@@ -367,7 +382,16 @@ fun SessionModeScreen(
             onDismissRequest = { showManualEndConfirm = false },
             containerColor = Color(0xFF1A1A1A),
             title = { Text("End Session?", color = Color.White) },
-            text = { Text("Are you sure you want to end this session early?", color = Color.White) },
+            text = { 
+                Column {
+                    Text("Are you sure you want to end this session early?", color = Color.White)
+                    val elapsed = if (state.totalTimeMs > 0) state.totalTimeMs - state.remainingTimeMs else 0L
+                    if (elapsed < 60_000L) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Note: Sessions shorter than 1 minute will be discarded and not saved.", color = Color(0xFFF5A623), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {
@@ -522,7 +546,8 @@ fun AppGrid(
     apps: List<AppUI>,
     funApps: List<AppUI>,
     funBudgetRemainingMs: Long,
-    funBudgetTotalMs: Long
+    funBudgetTotalMs: Long,
+    onFunAppBlocked: () -> Unit
 ) {
     val context = LocalContext.current
     val pm = context.packageManager
@@ -548,7 +573,7 @@ fun AppGrid(
                     modifier = Modifier
                         .clickable {
                             if (isFunDisabled) {
-                                Toast.makeText(context, "Fun budget used. Back to work.", Toast.LENGTH_SHORT).show()
+                                onFunAppBlocked()
                             } else {
                                 val launchIntent = pm.getLaunchIntentForPackage(app.packageName)
                                 if (launchIntent != null) {

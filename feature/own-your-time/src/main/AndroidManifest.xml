@@ -28,6 +28,15 @@
         </service>
 
         <service
+            android:name=".service.PassiveTrackingService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="passive_fun_time_tracking" />
+        </service>
+
+        <service
             android:name=".service.QuickSettingsTileService"
             android:label="Start Session"
             android:icon="@android:drawable/ic_media_play"

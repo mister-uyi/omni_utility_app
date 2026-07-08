@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.omniutility.feature.ownyourtime.data.db.entity.AppCategory
 import com.omniutility.feature.ownyourtime.data.db.entity.AppConfigEntity
 import com.omniutility.feature.ownyourtime.data.db.entity.UserConfigEntity
+import com.omniutility.feature.ownyourtime.data.db.entity.UserInterestEntity
 import com.omniutility.feature.ownyourtime.data.repository.OwnYourTimeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -32,8 +33,12 @@ data class SettingsState(
     val productivityApps: List<AppConfigEntity> = emptyList(),
     val funApps: List<AppConfigEntity> = emptyList(),
     val systemApps: List<AppConfigEntity> = emptyList(),
-    val unassignedInstalledApps: List<InstalledApp> = emptyList(),
-    val appPickerCategory: AppCategory? = null
+    val pickerApps: List<InstalledApp> = emptyList(),
+    val appPickerCategory: AppCategory? = null,
+    val interests: List<UserInterestEntity> = emptyList(),
+    val passiveBudgetEnabled: Boolean = false,
+    val passiveBudgetPercent: Int = 20,
+    val passiveBudgetPeriodMinutes: Int = 60
 )
 
 @HiltViewModel
@@ -44,13 +49,18 @@ class SettingsViewModel @Inject constructor(
 
     private val _allInstalledApps = MutableStateFlow<List<InstalledApp>>(emptyList())
     private val _appPickerCategory = MutableStateFlow<AppCategory?>(null)
+    private val _pickerAppsSnapshot = MutableStateFlow<List<InstalledApp>?>(null)
+    private val _passiveBudgetEnabled = MutableStateFlow(false)
+    private val _passiveBudgetPercent = MutableStateFlow(20)
+    private val _passiveBudgetPeriodMinutes = MutableStateFlow(60)
 
     val state: StateFlow<SettingsState> = combine(
         repository.observeUserConfig(),
         repository.observeAppConfigs(),
+        repository.observeInterests(),
         _allInstalledApps,
-        _appPickerCategory
-    ) { userConfig, appConfigs, installedApps, appPickerCategory ->
+        _appPickerCategory,
+    ) { userConfig, appConfigs, interests, installedApps, appPickerCategory ->
         val config = userConfig ?: UserConfigEntity()
         val prodApps = appConfigs.filter { it.category == AppCategory.PRODUCTIVITY }
         val funApps = appConfigs.filter { it.category == AppCategory.FUN }
@@ -64,13 +74,37 @@ class SettingsViewModel @Inject constructor(
             productivityApps = prodApps,
             funApps = funApps,
             systemApps = systemApps,
-            unassignedInstalledApps = unassignedApps,
-            appPickerCategory = appPickerCategory
+            pickerApps = _pickerAppsSnapshot.value ?: unassignedApps,
+            appPickerCategory = appPickerCategory,
+            interests = interests,
+            passiveBudgetEnabled = _passiveBudgetEnabled.value,
+            passiveBudgetPercent = _passiveBudgetPercent.value,
+            passiveBudgetPeriodMinutes = _passiveBudgetPeriodMinutes.value
+        )
+    }.combine(
+        combine(_passiveBudgetEnabled, _passiveBudgetPercent, _passiveBudgetPeriodMinutes) { enabled, percent, period ->
+            Triple(enabled, percent, period)
+        }
+    ) { settingsState, (enabled, percent, period) ->
+        settingsState.copy(
+            passiveBudgetEnabled = enabled,
+            passiveBudgetPercent = percent,
+            passiveBudgetPeriodMinutes = period
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsState())
 
     init {
         loadInstalledApps()
+        loadPassiveBudget()
+    }
+
+    private fun loadPassiveBudget() {
+        viewModelScope.launch {
+            val budget = repository.getPassiveBudget()
+            _passiveBudgetEnabled.value = budget.enabled
+            _passiveBudgetPercent.value = budget.budgetPercent
+            _passiveBudgetPeriodMinutes.value = budget.periodMinutes
+        }
     }
 
     private fun loadInstalledApps() {
@@ -114,10 +148,15 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun showAppPicker(category: AppCategory) {
+        val assignedPackages = state.value.productivityApps.map { it.packageName } +
+                               state.value.funApps.map { it.packageName } +
+                               state.value.systemApps.map { it.packageName }
+        _pickerAppsSnapshot.value = _allInstalledApps.value.filter { it.packageName !in assignedPackages }
         _appPickerCategory.update { category }
     }
 
     fun hideAppPicker() {
+        _pickerAppsSnapshot.value = null
         _appPickerCategory.update { null }
     }
 
@@ -125,7 +164,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val appConfig = AppConfigEntity(packageName, appLabel, category)
             repository.saveAppConfig(appConfig)
-            hideAppPicker()
         }
     }
 
@@ -139,6 +177,53 @@ class SettingsViewModel @Inject constructor(
     fun removeAppConfig(packageName: String) {
         viewModelScope.launch {
             repository.removeAppConfig(packageName)
+        }
+    }
+
+    // --- Passive Budget ---
+
+    fun updatePassiveBudgetEnabled(enabled: Boolean) {
+        _passiveBudgetEnabled.value = enabled
+        persistPassiveBudget()
+    }
+
+    fun updatePassiveBudgetPercent(percent: Int) {
+        _passiveBudgetPercent.value = percent.coerceIn(0, 50)
+        persistPassiveBudget()
+    }
+
+    fun updatePassiveBudgetPeriod(minutes: Int) {
+        _passiveBudgetPeriodMinutes.value = minutes
+        persistPassiveBudget()
+    }
+
+    private fun persistPassiveBudget() {
+        viewModelScope.launch {
+            val current = repository.getPassiveBudget()
+            repository.savePassiveBudget(
+                current.copy(
+                    enabled = _passiveBudgetEnabled.value,
+                    budgetPercent = _passiveBudgetPercent.value,
+                    periodMinutes = _passiveBudgetPeriodMinutes.value
+                )
+            )
+        }
+    }
+
+    // --- Topics of Interest ---
+
+    fun addInterest(topic: String) {
+        val trimmed = topic.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch {
+            val interest = UserInterestEntity(topic = trimmed)
+            repository.saveInterest(interest)
+        }
+    }
+
+    fun removeInterest(id: String) {
+        viewModelScope.launch {
+            repository.deleteInterest(id)
         }
     }
 }

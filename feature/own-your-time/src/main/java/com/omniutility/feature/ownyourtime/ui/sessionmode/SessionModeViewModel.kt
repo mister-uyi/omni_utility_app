@@ -187,12 +187,18 @@ class SessionModeViewModel @Inject constructor(
         viewModelScope.launch {
             val sessionId = currentSessionId ?: return@launch
             val session = repository.getSession(sessionId) ?: return@launch
-            repository.saveSession(
-                session.copy(
-                    endedAt = System.currentTimeMillis(),
-                    actualDurationMs = System.currentTimeMillis() - session.startedAt
+            val actualDurationMs = System.currentTimeMillis() - session.startedAt
+            
+            if (actualDurationMs < 60_000L) {
+                repository.deleteSession(sessionId)
+            } else {
+                repository.saveSession(
+                    session.copy(
+                        endedAt = System.currentTimeMillis(),
+                        actualDurationMs = actualDurationMs
+                    )
                 )
-            )
+            }
         }
     }
 }

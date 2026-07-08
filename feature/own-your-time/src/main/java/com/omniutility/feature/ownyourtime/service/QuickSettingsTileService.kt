@@ -60,39 +60,32 @@ class QuickSettingsTileService : TileService() {
                 // If active, just launch the app to show the active session screen
                 launchApp()
             } else {
-                // If inactive, start a new session with user config defaults
-                val config = repository.getUserConfig()
-                val durationMs = config.defaultDurationMs
-                val funBudgetPercent = config.defaultFunBudgetPercent
-                val funBudgetMs = (durationMs * funBudgetPercent / 100)
-                
-                val newSession = SessionEntity(
-                    id = UUID.randomUUID().toString(),
-                    startedAt = System.currentTimeMillis(),
-                    plannedDurationMs = durationMs,
-                    actualDurationMs = 0L,
-                    funBudgetPercent = funBudgetPercent,
-                    funBudgetMs = funBudgetMs
-                )
-                repository.saveSession(newSession)
-                
-                // Start SessionService
-                val serviceIntent = Intent(this@QuickSettingsTileService, SessionService::class.java).apply {
-                    putExtra(SessionService.EXTRA_DURATION_MS, durationMs)
-                    putExtra(SessionService.EXTRA_SESSION_ID, newSession.id)
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(serviceIntent)
-                } else {
-                    startService(serviceIntent)
-                }
-                
-                // Launch the app
-                launchApp()
-                
-                // Refresh tile
-                updateTileState()
+                // If inactive, launch the app with an extra to show session setup
+                launchAppWithSessionSetup()
             }
+        }
+    }
+
+    private fun launchAppWithSessionSetup() {
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName) ?: return
+        launchIntent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+        )
+        launchIntent.putExtra("EXTRA_SHOW_SESSION_SETUP", true)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val pendingIntent = android.app.PendingIntent.getActivity(
+                this,
+                0,
+                launchIntent,
+                android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            startActivityAndCollapse(pendingIntent)
+        } else {
+            @Suppress("DEPRECATION")
+            startActivityAndCollapse(launchIntent)
         }
     }
 

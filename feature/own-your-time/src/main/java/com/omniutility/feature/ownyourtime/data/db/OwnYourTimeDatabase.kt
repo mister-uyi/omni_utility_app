@@ -24,9 +24,11 @@ class Converters {
         SessionEntity::class,
         SessionTaskEntity::class,
         AppConfigEntity::class,
-        UserConfigEntity::class
+        UserConfigEntity::class,
+        UserInterestEntity::class,
+        PassiveBudgetEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -35,4 +37,6 @@ abstract class OwnYourTimeDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
     abstract fun appConfigDao(): AppConfigDao
     abstract fun userConfigDao(): UserConfigDao
+    abstract fun userInterestDao(): UserInterestDao
+    abstract fun passiveBudgetDao(): PassiveBudgetDao
 }

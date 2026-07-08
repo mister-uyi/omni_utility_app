@@ -43,6 +43,9 @@ import com.omniutility.feature.finance.data.db.AccountContainerEntity
 import com.omniutility.feature.finance.data.db.FinancialCompassGoalEntity
 import com.omniutility.feature.finance.data.db.MemoryLookupEntity
 import com.omniutility.feature.finance.data.db.TransactionRecordEntity
+import com.omniutility.core.ui.HUDPill
+import com.omniutility.core.ui.HUDPillMessage
+import com.omniutility.core.ui.HUDPillType
 import com.omniutility.feature.finance.data.service.StatementIngestionService
 import com.omniutility.feature.finance.platform.AICoreStatus
 import java.text.SimpleDateFormat
@@ -80,6 +83,7 @@ fun FinanceDashboardScreen(
     var showAddAccountDialog by remember { mutableStateOf(false) }
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedCategoryContext by remember { mutableStateOf<String?>(null) }
+    var hudMessage by remember { mutableStateOf<HUDPillMessage?>(null) }
     val density = LocalDensity.current
     val keyboardHeightDp = with(density) { WindowInsets.ime.getBottom(density).toDp() }
     val isKeyboardActiveForNavHide = keyboardHeightDp > 100.dp
@@ -106,7 +110,7 @@ fun FinanceDashboardScreen(
             } else {
                 context.startService(intent)
             }
-            android.widget.Toast.makeText(context, "Processing statement in background...", android.widget.Toast.LENGTH_SHORT).show()
+            hudMessage = HUDPillMessage("Processing statement in background...", HUDPillType.SUCCESS)
         }
     }
 
@@ -237,6 +241,14 @@ fun FinanceDashboardScreen(
                         viewModel.addGoal(text, extraInfo, 0.0, 0)
                         showAddGoalDialog = false
                     }
+                )
+            }
+
+            hudMessage?.let { msg ->
+                HUDPill(
+                    message = msg.message,
+                    type = msg.type,
+                    onDismiss = { hudMessage = null }
                 )
             }
         }

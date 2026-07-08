@@ -41,10 +41,24 @@ class AllSessionsViewModel @Inject constructor(
 
     val uiState: StateFlow<AllSessionsUiState> = combine(
         repository.observeAllSessions().flatMapLatest { sessions ->
-            if (sessions.isEmpty()) {
+            val now = System.currentTimeMillis()
+            val validSessions = sessions.map { session ->
+                if (session.endedAt != null && session.actualDurationMs == 0L) {
+                    session.copy(actualDurationMs = session.endedAt - session.startedAt)
+                } else if (session.endedAt == null && session.startedAt + session.plannedDurationMs < now) {
+                    session.copy(
+                        endedAt = session.startedAt + session.plannedDurationMs,
+                        actualDurationMs = session.plannedDurationMs
+                    )
+                } else session
+            }.filter { 
+                it.endedAt != null && it.actualDurationMs >= 60_000L 
+            }
+
+            if (validSessions.isEmpty()) {
                 flowOf(emptyList())
             } else {
-                val taskFlows = sessions.map { session ->
+                val taskFlows = validSessions.map { session ->
                     repository.observeSessionTasks(session.id).map { tasks ->
                         SessionWithTasks(session, tasks)
                     }

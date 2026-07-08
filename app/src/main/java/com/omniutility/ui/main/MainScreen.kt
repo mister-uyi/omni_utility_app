@@ -29,6 +29,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
 import com.omniutility.SoftPower
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.omniutility.core.ui.HUDPill
+import com.omniutility.core.ui.HUDPillMessage
+import com.omniutility.core.ui.HUDPillType
 import com.omniutility.Finance
 import com.omniutility.OwnYourTime
 import com.omniutility.core.ui.UtilityMetadata
@@ -42,6 +48,7 @@ fun MainScreen(
     viewModel: MainScreenViewModel = viewModel()
 ) {
     val items by viewModel.uiState.collectAsState()
+    var hudMessage by remember { mutableStateOf<HUDPillMessage?>(null) }
 
     Scaffold(
         topBar = {
@@ -55,14 +62,14 @@ fun MainScreen(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.fillMaxSize()
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 24.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
             item {
                 Text(
                     text = "System Tools & Tweaks",
@@ -80,7 +87,7 @@ fun MainScreen(
                     onClick = {
                         if (metadata.isLocked) {
                             val msg = metadata.lockMessage ?: "This feature is locked on your device."
-                            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                            hudMessage = HUDPillMessage(msg, HUDPillType.WARNING)
                         } else {
                             if (metadata.id == "soft_power") {
                                 onItemClick(SoftPower)
@@ -94,7 +101,15 @@ fun MainScreen(
                 )
             }
         }
+        hudMessage?.let { msg ->
+            HUDPill(
+                message = msg.message,
+                type = msg.type,
+                onDismiss = { hudMessage = null }
+            )
+        }
     }
+}
 }
 
 @Composable

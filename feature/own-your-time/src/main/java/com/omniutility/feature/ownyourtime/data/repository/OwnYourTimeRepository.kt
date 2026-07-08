@@ -12,7 +12,9 @@ class OwnYourTimeRepository @Inject constructor(
     private val taskDao: TaskDao,
     private val sessionDao: SessionDao,
     private val appConfigDao: AppConfigDao,
-    private val userConfigDao: UserConfigDao
+    private val userConfigDao: UserConfigDao,
+    private val userInterestDao: UserInterestDao,
+    private val passiveBudgetDao: PassiveBudgetDao
 ) {
     fun observeTasks(): Flow<List<TaskEntity>> = taskDao.observeAll()
     suspend fun getTask(id: String): TaskEntity? = taskDao.getById(id)
@@ -24,6 +26,7 @@ class OwnYourTimeRepository @Inject constructor(
     fun observeSession(id: String): Flow<SessionEntity?> = sessionDao.observeById(id)
     suspend fun getSession(id: String): SessionEntity? = sessionDao.getById(id)
     suspend fun saveSession(session: SessionEntity) = sessionDao.upsert(session)
+    suspend fun deleteSession(id: String) = sessionDao.deleteById(id)
     fun observeSessionTasks(sessionId: String): Flow<List<SessionTaskEntity>> = sessionDao.observeTasksForSession(sessionId)
     suspend fun getSessionTasks(sessionId: String): List<SessionTaskEntity> = sessionDao.getTasksForSession(sessionId)
     suspend fun saveSessionTask(sessionTask: SessionTaskEntity) = sessionDao.upsertSessionTask(sessionTask)
@@ -48,4 +51,14 @@ class OwnYourTimeRepository @Inject constructor(
     fun observeUserConfig(): Flow<UserConfigEntity?> = userConfigDao.observe()
     suspend fun getUserConfig(): UserConfigEntity = userConfigDao.get() ?: UserConfigEntity()
     suspend fun saveUserConfig(config: UserConfigEntity) = userConfigDao.upsert(config)
+
+    // Passive budget tracking
+    fun observePassiveBudget(): Flow<PassiveBudgetEntity?> = passiveBudgetDao.observe()
+    suspend fun getPassiveBudget(): PassiveBudgetEntity = passiveBudgetDao.get() ?: PassiveBudgetEntity()
+    suspend fun savePassiveBudget(budget: PassiveBudgetEntity) = passiveBudgetDao.upsert(budget)
+
+    fun observeInterests(): Flow<List<UserInterestEntity>> = userInterestDao.observeAll()
+    suspend fun getInterests(): List<UserInterestEntity> = userInterestDao.getAll()
+    suspend fun saveInterest(interest: UserInterestEntity) = userInterestDao.upsert(interest)
+    suspend fun deleteInterest(id: String) = userInterestDao.delete(id)
 }
