@@ -145,6 +145,18 @@ class PassiveTrackingService : Service() {
         // ── Check budget exhaustion ─────────────────────────────────
         if (funTimeUsedMs >= budgetMs) {
             setBudgetExhaustedFlag()
+            
+            // Intercept and block fun apps by launching Explore screen
+            if (isFunApp) {
+                val launchIntent = Intent().apply {
+                    setClassName(this@PassiveTrackingService, "com.omniutility.MainActivity")
+                    action = Intent.ACTION_MAIN
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("EXTRA_SHOW_EXPLORE", true)
+                }
+                startActivity(launchIntent)
+            }
         }
 
         // ── Persist state every PERSIST_INTERVAL_MS ─────────────────

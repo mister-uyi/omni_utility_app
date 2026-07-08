@@ -1,4 +1,4 @@
-package com.omniutility.feature.ownyourtime.ui.tasks
+package com.omniutility.feature.ownyourtime.ui.explore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,7 +15,7 @@ import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
-class TasksViewModel @Inject constructor(
+class ExploreViewModel @Inject constructor(
     private val repository: OwnYourTimeRepository
 ) : ViewModel() {
 

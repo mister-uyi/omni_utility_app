@@ -1,4 +1,4 @@
-package com.omniutility.feature.ownyourtime.ui.tasks
+package com.omniutility.feature.ownyourtime.ui.explore
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,9 +28,9 @@ import com.omniutility.feature.ownyourtime.data.db.entity.TaskType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TasksScreen(
+fun ExploreScreen(
     modifier: Modifier = Modifier,
-    viewModel: TasksViewModel = hiltViewModel()
+    viewModel: ExploreViewModel = hiltViewModel()
 ) {
     val tasks by viewModel.tasks.collectAsState()
     var editingTask by remember { mutableStateOf<TaskEntity?>(null) }
@@ -77,14 +77,14 @@ fun TasksScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "Task Templates",
+                text = "Explore",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFFF5A623),
                 modifier = Modifier.padding(top = 16.dp)
             )
             Text(
-                text = "Create reusable task templates for your sessions.",
+                text = "Discover content based on your interests or create your own tasks.",
                 fontSize = 14.sp,
                 color = Color(0xFF8A8A8A),
                 modifier = Modifier.padding(bottom = 16.dp, top = 4.dp)

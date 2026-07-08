@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.omniutility.feature.ownyourtime.ui.dashboard.DashboardScreen
 import com.omniutility.feature.ownyourtime.ui.settings.SettingsScreen
-import com.omniutility.feature.ownyourtime.ui.tasks.TasksScreen
+import com.omniutility.feature.ownyourtime.ui.explore.ExploreScreen
 import com.omniutility.feature.ownyourtime.ui.sessionmode.SessionModeScreen
 import com.omniutility.feature.ownyourtime.ui.allsessions.AllSessionsScreen
 import com.omniutility.feature.ownyourtime.ui.sessionsetup.SessionSetupSheet
@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 
 private enum class OytTab(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Default.DateRange),
-    TASKS("Tasks", Icons.AutoMirrored.Filled.List),
+    EXPLORE("Explore", Icons.AutoMirrored.Filled.List),
     SETTINGS("Settings", Icons.Default.Settings)
 }
 
@@ -46,6 +46,12 @@ fun OwnYourTimeScreen(
                 showSetupSheet = true
                 newIntent.removeExtra("EXTRA_SHOW_SESSION_SETUP")
             }
+            if (newIntent.getBooleanExtra("EXTRA_SHOW_EXPLORE", false)) {
+                selectedTab = OytTab.EXPLORE
+                showAllSessions = false
+                activeSessionId = null
+                newIntent.removeExtra("EXTRA_SHOW_EXPLORE")
+            }
         }
         activity?.addOnNewIntentListener(listener)
         onDispose { activity?.removeOnNewIntentListener(listener) }
@@ -55,6 +61,12 @@ fun OwnYourTimeScreen(
         if (activity?.intent?.getBooleanExtra("EXTRA_SHOW_SESSION_SETUP", false) == true) {
             showSetupSheet = true
             activity.intent.removeExtra("EXTRA_SHOW_SESSION_SETUP")
+        }
+        if (activity?.intent?.getBooleanExtra("EXTRA_SHOW_EXPLORE", false) == true) {
+            selectedTab = OytTab.EXPLORE
+            showAllSessions = false
+            activeSessionId = null
+            activity.intent.removeExtra("EXTRA_SHOW_EXPLORE")
         }
     }
 
@@ -114,7 +126,7 @@ fun OwnYourTimeScreen(
                             showAllSessions = true
                         }
                     )
-                    OytTab.TASKS -> TasksScreen()
+                    OytTab.EXPLORE -> ExploreScreen()
                     OytTab.SETTINGS -> SettingsScreen()
                 }
             }
