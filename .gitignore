@@ -13,3 +13,7 @@ build/
 .externalNativeBuild
 .cxx
 local.properties
+*.db
+*.db-shm
+*.db-wal
+test.kt
