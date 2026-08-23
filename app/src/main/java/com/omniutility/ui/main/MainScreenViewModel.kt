@@ -39,13 +39,6 @@ class MainScreenViewModel @Inject constructor(
                 lockMessage = if (status is AICoreStatus.Unsupported) {
                     "Requires Gemini Nano / AICore support on your device."
                 } else null
-            ),
-            UtilityMetadata(
-                id = "own_your_time",
-                title = "Own Your Time",
-                description = "Temporary focused session mode. Seal your phone to your task list.",
-                icon = Icons.Default.Build,
-                route = "own_your_time"
             )
         )
     }.stateIn(
