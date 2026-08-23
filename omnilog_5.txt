@@ -1,0 +1,18 @@
+--------- beginning of system
+07-08 09:10:58.799  1995  1995 D InsetsController: hide(ime())
+07-08 09:10:58.799  1995  1995 I ImeTracker: com.omniutility:89741b93: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+07-08 09:11:09.211  1995  1995 D InsetsController: hide(ime())
+07-08 09:11:09.211  1995  1995 I ImeTracker: com.omniutility:6ea54298: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+07-08 09:11:28.348  1995  1995 D InsetsController: show(ime())
+07-08 09:11:28.349  1995  1995 I ImeTracker: com.omniutility:7c867c8a: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT_BY_INSETS_API fromUser false userId 0 displayId 0
+07-08 09:11:28.350  1995  1995 D InsetsController: Setting requestedVisibleTypes to 511 (was 503)
+07-08 09:11:28.398  1995  1995 I ImeTracker: com.omniutility:79633862: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false userId 0 displayId 0
+07-08 09:11:28.398  1995  1995 D InsetsController: show(ime())
+07-08 09:11:28.398  1995  1995 I ImeTracker: com.omniutility:79633862: onCancelled at PHASE_CLIENT_REPORT_REQUESTED_VISIBLE_TYPES
+07-08 09:11:28.949  1995  1995 I ImeTracker: com.omniutility:7c867c8a: onShown
+07-08 09:11:31.155  1995  1995 D InsetsController: hide(ime())
+07-08 09:11:31.155  1995  1995 D InsetsController: Setting requestedVisibleTypes to 503 (was 511)
+07-08 09:11:31.186  1995  1995 I ImeTracker: system_server:af46c43c: onCancelled at PHASE_CLIENT_ON_CONTROLS_CHANGED
+07-08 09:11:32.909  1995  1995 D InsetsController: hide(ime())
+07-08 09:11:32.909  1995  1995 I ImeTracker: com.omniutility:c6147258: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_BY_INSETS_API fromUser false userId 0 displayId 0
+07-08 09:11:32.909  1995  1995 I ImeTracker: com.omniutility:c6147258: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN

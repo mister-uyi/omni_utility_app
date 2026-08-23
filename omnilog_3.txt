@@ -1,0 +1,119 @@
+--------- beginning of main
+07-08 09:04:44.942 32745 32745 I libprocessgroup: Created cgroup /sys/fs/cgroup/apps/uid_10365/pid_32745
+07-08 09:04:44.953 32745 32745 I Zygote  : Process 32745 created for com.omniutility
+07-08 09:04:44.953 32745 32745 I com.omniutility: Late-enabling -Xcheck:jni
+07-08 09:04:44.991 32745 32745 I com.omniutility: Using generational CollectorTypeCMC GC.
+07-08 09:04:45.024 32745 32745 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-08 09:04:45.075 32745 32745 I AconfigPackage: com.android.bluetooth.beta.flags is mapped to com.android.bt
+07-08 09:04:45.075 32745 32745 I AconfigPackage: com.android.bluetooth.flags is mapped to com.android.bt
+07-08 09:04:45.076 32745 32745 I AconfigPackage: com.android.crashrecovery.flags is mapped to com.android.crashrecovery
+07-08 09:04:45.078 32745 32745 I AconfigPackage: com.android.adservices.flags is mapped to com.android.adservices
+07-08 09:04:45.079 32745 32745 I AconfigPackage: com.android.sdksandbox.flags is mapped to com.android.adservices
+07-08 09:04:45.079 32745 32745 I AconfigPackage: android.app.sdksandbox.flags is mapped to com.android.adservices
+07-08 09:04:45.081 32745 32745 I AconfigPackage: android.media.swcodec.flags is mapped to com.android.media.swcodec
+07-08 09:04:45.083 32745 32745 I AconfigPackage: com.android.uwb.flags is mapped to com.android.uwb
+07-08 09:04:45.083 32745 32745 I AconfigPackage: com.android.ranging.flags is mapped to com.android.uwb
+07-08 09:04:45.085 32745 32745 I AconfigPackage: com.android.uprobestats.flags is mapped to com.android.uprobestats
+07-08 09:04:45.085 32745 32745 I AconfigPackage: android.uprobestats.mainline.flags is mapped to com.android.uprobestats
+07-08 09:04:45.087 32745 32745 I AconfigPackage: com.android.media.extractor.flags is mapped to com.android.media
+07-08 09:04:45.087 32745 32745 I AconfigPackage: com.android.media.metrics.flags is mapped to com.android.media
+07-08 09:04:45.090 32745 32745 I AconfigPackage: com.android.media.mainline.flags is mapped to com.android.media
+07-08 09:04:45.094 32745 32745 I AconfigPackage: com.android.rkpd.flags is mapped to com.android.rkpd
+07-08 09:04:45.104 32745 32745 I AconfigPackage: android.os.profiling is mapped to com.android.profiling
+07-08 09:04:45.104 32745 32745 I AconfigPackage: android.os.profiling.anomaly.beta.flags is mapped to com.android.profiling
+07-08 09:04:45.104 32745 32745 I AconfigPackage: android.os.profiling.anomaly.flags is mapped to com.android.profiling
+07-08 09:04:45.107 32745 32745 I AconfigPackage: com.android.devicelock.flags is mapped to com.android.devicelock
+07-08 09:04:45.111 32745 32745 I AconfigPackage: com.android.ipsec.flags is mapped to com.android.ipsec
+07-08 09:04:45.115 32745 32745 I AconfigPackage: com.android.appsearch.flags is mapped to com.android.appsearch
+07-08 09:04:45.117 32745 32745 I AconfigPackage: com.android.org.conscrypt.flags is mapped to com.android.conscrypt
+07-08 09:04:45.117 32745 32745 I AconfigPackage: com.android.org.conscrypt.net.flags is mapped to com.android.conscrypt
+07-08 09:04:45.119 32745 32745 I AconfigPackage: com.android.wifi.flags is mapped to com.android.wifi
+07-08 09:04:45.120 32745 32745 I AconfigPackage: com.android.system.virtualmachine.flags is mapped to com.android.virt
+07-08 09:04:45.123 32745 32745 I AconfigPackage: com.android.npumanager is mapped to com.android.npumanager
+07-08 09:04:45.124 32745 32745 I AconfigPackage: com.android.art.flags is mapped to com.android.art
+07-08 09:04:45.124 32745 32745 I AconfigPackage: com.android.art.rw.flags is mapped to com.android.art
+07-08 09:04:45.124 32745 32745 I AconfigPackage: com.android.libcore is mapped to com.android.art
+07-08 09:04:45.130 32745 32745 I AconfigPackage: com.android.signature.flags is mapped to com.android.mediaprovider
+07-08 09:04:45.130 32745 32745 I AconfigPackage: com.android.providers.media.flags is mapped to com.android.mediaprovider
+07-08 09:04:45.131 32745 32745 I AconfigPackage: android.graphics.pdf.flags is mapped to com.android.mediaprovider
+07-08 09:04:45.131 32745 32745 I AconfigPackage: android.graphics.pdf.flags.readonly is mapped to com.android.mediaprovider
+07-08 09:04:45.134 32745 32745 I AconfigPackage: com.android.icu is mapped to com.android.i18n
+07-08 09:04:45.135 32745 32745 I AconfigPackage: com.android.healthfitness.flags is mapped to com.android.healthfitness
+07-08 09:04:45.136 32745 32745 I AconfigPackage: com.android.healthfitness.beta is mapped to com.android.healthfitness
+07-08 09:04:45.137 32745 32745 I AconfigPackage: com.android.adservices.ondevicepersonalization.flags is mapped to com.android.ondevicepersonalization
+07-08 09:04:45.140 32745 32745 I AconfigPackage: com.android.cellbroadcastreceiver.flags is mapped to com.android.cellbroadcast
+07-08 09:04:45.143 32745 32745 I AconfigPackage: com.android.nfc.module.flags is mapped to com.android.nfcservices
+07-08 09:04:45.143 32745 32745 I AconfigPackage: com.android.nfc.module.nonexported.flags is mapped to com.android.nfcservices
+07-08 09:04:45.149 32745 32745 I AconfigPackage: com.android.tethering.mainline.beta is mapped to com.android.tethering
+07-08 09:04:45.149 32745 32745 I AconfigPackage: android.net.http is mapped to com.android.tethering
+07-08 09:04:45.149 32745 32745 I AconfigPackage: com.android.tethering.readonly.flags is mapped to com.android.tethering
+07-08 09:04:45.149 32745 32745 I AconfigPackage: android.net.vcn is mapped to com.android.tethering
+07-08 09:04:45.149 32745 32745 I AconfigPackage: com.android.net.flags is mapped to com.android.tethering
+07-08 09:04:45.149 32745 32745 I AconfigPackage: com.android.tethering.flags is mapped to com.android.tethering
+07-08 09:04:45.149 32745 32745 I AconfigPackage: com.android.tethering.beta.test is mapped to com.android.tethering
+07-08 09:04:45.149 32745 32745 I AconfigPackage: com.android.nearby.flags is mapped to com.android.tethering
+07-08 09:04:45.150 32745 32745 I AconfigPackage: com.android.net.thread.flags is mapped to com.android.tethering
+07-08 09:04:45.150 32745 32745 I AconfigPackage: android.net.http.flags is mapped to com.android.tethering
+07-08 09:04:45.153 32745 32745 I AconfigPackage: com.android.webapp.flags is mapped to com.android.webapp
+07-08 09:04:45.160 32745 32745 I AconfigPackage: com.android.adbd.flags is mapped to com.android.adbd
+07-08 09:04:45.166 32745 32745 I AconfigPackage: com.android.telephony.flags is mapped to com.android.telephony2
+07-08 09:04:45.167 32745 32745 I AconfigPackage: com.android.compos.flags is mapped to com.android.compos
+07-08 09:04:45.174 32745 32745 I AconfigPackage: android.telecom.flags is mapped to com.android.telephonycore
+07-08 09:04:45.174 32745 32745 I AconfigPackage: com.android.internal.telecom.flags is mapped to com.android.telephonycore
+07-08 09:04:45.174 32745 32745 I AconfigPackage: com.android.telephony.flags is mapped to com.android.telephonycore
+07-08 09:04:45.179 32745 32745 I AconfigPackage: com.android.os.statsd.flags is mapped to com.android.os.statsd
+07-08 09:04:45.186 32745 32745 I AconfigPackage: com.android.permission.flags is mapped to com.android.permission
+07-08 09:04:45.187 32745 32745 I AconfigPackage: com.android.permissioncontroller.flags is mapped to com.android.permission
+07-08 09:04:45.191 32745 32745 I AconfigPackage: com.android.scheduling.flags is mapped to com.android.scheduling
+07-08 09:04:45.203 32745 32745 I AconfigPackage: android.provider.flags is mapped to com.android.configinfrastructure
+07-08 09:04:45.204 32745 32745 I AconfigPackage: com.android.server.deviceconfig is mapped to com.android.configinfrastructure
+07-08 09:04:45.209 32745 32745 I AconfigPackage: com.google.android.widevine.flags is mapped to com.google.android.widevine
+07-08 09:04:45.210 32745 32745 E FeatureFlagsImplExport: android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+07-08 09:04:45.258 32745 32745 I Typeface: Preloading /system/fonts/Roboto-Regular.ttf
+07-08 09:04:45.262 32745 32745 I Typeface: Preloading /system/fonts/RobotoStatic-Regular.ttf
+07-08 09:04:45.276 32745 32745 I SystemFonts: Loading font config from /system/etc/fonts.xml
+07-08 09:04:46.091 32745 32745 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+07-08 09:04:46.091 32745 32745 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.sidecar.jar
+07-08 09:04:46.533 32745 32745 D nativeloader: Configuring clns-9 for other apk /data/app/~~UB9wdSla8As-CPLTYnII-g==/com.omniutility-dZ85_1hJqyLKLXUjNzKaIg==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~UB9wdSla8As-CPLTYnII-g==/com.omniutility-dZ85_1hJqyLKLXUjNzKaIg==/lib/arm64:/data/app/~~UB9wdSla8As-CPLTYnII-g==/com.omniutility-dZ85_1hJqyLKLXUjNzKaIg==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/com.omniutility
+07-08 09:04:46.547 32745 32745 D nativeloader: Load libframework-connectivity-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity.jar: ok
+--------- beginning of system
+07-08 09:04:46.549 32745 32745 D ActivityThread: Set OS env TMPDIR to /data/user/0/com.omniutility/cache
+07-08 09:04:46.551 32745 32745 V GraphicsEnvironment: Currently set values for:
+07-08 09:04:46.551 32745 32745 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[com.android.angle]
+07-08 09:04:46.551 32745 32745 V GraphicsEnvironment:   angle_gl_driver_selection_values=[angle]
+07-08 09:04:46.551 32745 32745 V GraphicsEnvironment: com.omniutility is not listed in per-application setting
+07-08 09:04:46.551 32745 32745 V GraphicsEnvironment: No special selections for ANGLE, returning default driver choice
+07-08 09:04:46.552 32745 32745 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+07-08 09:04:46.602 32745   306 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+07-08 09:04:46.606 32745   306 D vulkan  : searching for layers in '/data/app/~~UB9wdSla8As-CPLTYnII-g==/com.omniutility-dZ85_1hJqyLKLXUjNzKaIg==/lib/arm64'
+07-08 09:04:46.607 32745   306 D vulkan  : searching for layers in '/data/app/~~UB9wdSla8As-CPLTYnII-g==/com.omniutility-dZ85_1hJqyLKLXUjNzKaIg==/base.apk!/lib/arm64-v8a'
+07-08 09:04:46.629 32745 32745 D DesktopExperienceFlags: Toggle override initialized to: false
+07-08 09:04:46.666 32745 32745 D CompatChangeReporter: Compat change id reported: 377864165; UID 10365; state: ENABLED
+07-08 09:04:46.699 32745 32745 I ContentCaptureHelper: Setting logging level to OFF
+07-08 09:04:46.761 32745 32745 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@3d428d
+07-08 09:04:46.761 32745   351 D WindowOnBackDispatcher: setOnBackInvokedCallbackInfo: android.app.Activity$$ExternalSyntheticLambda0@3d428d
+07-08 09:04:47.023 32745 32745 I com.omniutility: hiddenapi: Accessing hidden method Landroid/os/SystemProperties;->addChangeCallback(Ljava/lang/Runnable;)V (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/compose/ui/platform/AndroidComposeView$Companion; (domain=app, TargetSdkVersion=36) using reflection: allowed
+07-08 09:04:47.037 32745 32745 E VibratorInfo: Invalid frequency profile received from HAL. resonantFrequencyHz=NaN, frequenciesHz=null, outputAccelerationsGs=null
+07-08 09:04:47.038 32745 32745 E VibratorInfo: Invalid frequency profile received from HAL. resonantFrequencyHz=146.5409, frequenciesHz=null, outputAccelerationsGs=null
+07-08 09:04:47.208 32745 32745 D VRI[MainActivity]: WindowInsets changed: 1008x2244 statusBars:[0,113,0,0] navigationBars:[0,0,0,46] mandatorySystemGestures:[0,136,0,61] 
+07-08 09:04:47.389 32745 32745 I HWUI    : Using FreeType backend (prop=Auto)
+07-08 09:04:47.707 32745 32745 I Surface : Creating surface for consumer unnamed-32745-0 with slotExpansion=1 for 64 slots
+07-08 09:04:47.709 32745 32745 I Surface : Creating surface for consumer VRI[MainActivity]#0(BLAST Consumer)0 with slotExpansion=1 for 64 slots
+07-08 09:04:47.804 32745 32756 I HWUI    : Davey! duration=1190ms; Flags=1, FrameTimelineVsyncId=113372452, IntendedVsync=335691590878588, Vsync=335691749222688, InputEventId=0, HandleInputStart=335691755353077, AnimationStart=335691755364999, PerformTraversalsStart=335691755507699, DrawStart=335692729229176, FrameDeadline=335691607478588, FrameStartTime=335691754962940, FrameInterval=8333900, WorkloadTarget=16600000, AnimationTime=335691749222688, AnimationCounter=-1, SyncQueued=335692737674529, SyncStart=335692737847869, IssueDrawCommandsStart=335692738035979, SwapBuffers=335692780507089, FrameCompleted=335692781731902, DequeueBufferDuration=15422, QueueBufferDuration=178345, GpuCompleted=335692781731902, SwapBuffersCompleted=335692780742400, DisplayPresentTime=0, CommandSubmissionCompleted=335692780507089, 
+07-08 09:04:47.854 32745 32751 I com.omniutility: Compiler allocated 5607KB to compile void android.view.ViewRootImpl.performTraversals(long)
+07-08 09:04:47.865 32745 32745 I Choreographer: Skipped 120 frames!  The application may be doing too much work on its main thread.
+07-08 09:04:48.065 32745 32745 D VRI[MainActivity]: visibilityChanged oldVisibility=true newVisibility=false
+07-08 09:04:48.245 32745 32745 E VibratorInfo: Invalid frequency profile received from HAL. resonantFrequencyHz=146.5409, frequenciesHz=null, outputAccelerationsGs=null
+07-08 09:04:48.272 32745 32745 I ContentCaptureHelper: Setting logging level to OFF
+07-08 09:04:48.285 32745 32745 I Surface : Creating surface for consumer unnamed-32745-1 with slotExpansion=1 for 64 slots
+07-08 09:04:48.286 32745 32745 I Surface : Creating surface for consumer VRI[]#1(BLAST Consumer)1 with slotExpansion=1 for 64 slots
+07-08 09:04:49.424 32745 32745 I Surface : Creating surface for consumer unnamed-32745-2 with slotExpansion=1 for 64 slots
+07-08 09:04:49.425 32745 32745 I Surface : Creating surface for consumer VRI[MainActivity]#2(BLAST Consumer)2 with slotExpansion=1 for 64 slots
+07-08 09:04:49.498 32745 32745 D InsetsController: hide(ime())
+07-08 09:04:49.500 32745 32745 I ImeTracker: com.omniutility:99da4dd5: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+07-08 09:04:50.454 32745 32745 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): androidx.navigationevent.OnBackInvokedInput$createOnBackAnimationCallback$1@ee51a86
+07-08 09:04:50.454 32745   351 D WindowOnBackDispatcher: setOnBackInvokedCallbackInfo: androidx.navigationevent.OnBackInvokedInput$createOnBackAnimationCallback$1@ee51a86
+07-08 09:04:50.853 32745 32745 I Choreographer: Skipped 46 frames!  The application may be doing too much work on its main thread.
+07-08 09:04:51.348 32745 32745 D VRI[MainActivity]: visibilityChanged oldVisibility=true newVisibility=false
+07-08 09:04:51.379 32745   306 D HWUI    : endAllActiveAnimators on 0xb400006fc799e670 (UnprojectedRipple) with handle 0xb400006ef79dd0c0
+07-08 09:04:52.588 32745   544 D ProfileInstaller: Installing profile for com.omniutility
