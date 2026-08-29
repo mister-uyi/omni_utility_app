@@ -49,6 +49,7 @@ dependencies {
   implementation(project(":core:ui"))
   implementation(project(":feature:soft-power"))
   implementation(project(":feature:finance"))
+  implementation(project(":feature:whatsapp-direct"))
 
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
