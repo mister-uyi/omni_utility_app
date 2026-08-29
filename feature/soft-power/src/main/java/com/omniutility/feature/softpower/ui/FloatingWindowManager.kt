@@ -55,6 +55,33 @@ class FloatingWindowManager(
     private var snapAnimator: ValueAnimator? = null
     private var currentParams: WindowManager.LayoutParams? = null
 
+    private val componentCallback = object : android.content.ComponentCallbacks {
+        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+            currentParams?.let { params ->
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    if (composeView != null) {
+                        val displayMetrics = context.resources.displayMetrics
+                        val screenWidth = displayMetrics.widthPixels
+                        val screenHeight = displayMetrics.heightPixels
+                        val viewWidth = composeView?.width ?: 0
+                        val viewHeight = composeView?.height ?: 0
+                        
+                        // Keep it on the same side it was before rotation
+                        params.x = if (isOnRightEdgeFlow.value) screenWidth - viewWidth else 0
+                        
+                        // Clamp Y to not fall off screen
+                        if (params.y > screenHeight - viewHeight) {
+                            params.y = maxOf(0, screenHeight - viewHeight)
+                        }
+                        
+                        snapToEdge(params)
+                    }
+                }, 150)
+            }
+        }
+        override fun onLowMemory() {}
+    }
+
     fun show() {
         if (composeView != null) return
 
@@ -146,6 +173,7 @@ class FloatingWindowManager(
             }
         }
 
+        context.registerComponentCallbacks(componentCallback)
         windowManager.addView(composeView, params)
     }
 
@@ -174,6 +202,7 @@ class FloatingWindowManager(
     }
 
     fun dismiss() {
+        context.unregisterComponentCallbacks(componentCallback)
         snapAnimator?.cancel()
         composeView?.let {
             try {
