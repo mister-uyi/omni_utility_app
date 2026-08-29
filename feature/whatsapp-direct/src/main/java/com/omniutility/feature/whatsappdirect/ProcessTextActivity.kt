@@ -11,9 +11,11 @@ class ProcessTextActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val text = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
+        val processText = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
+        val shareText = intent.getStringExtra(Intent.EXTRA_TEXT)
+        val text = processText ?: shareText
 
-        if (text != null) {
+        if (text != null && text.isNotBlank()) {
             handleText(text)
         } else {
             Toast.makeText(this, "No text selected.", Toast.LENGTH_SHORT).show()
